@@ -59,7 +59,11 @@ Im Netlify-Projekt **Project configuration** → **Environment variables** öffn
 Sichere Werte können in PowerShell erzeugt werden:
 
 ```powershell
-[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+$bytes = New-Object byte[] 48
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+[Convert]::ToBase64String($bytes)
+$rng.Dispose()
 ```
 
 Den Befehl zweimal ausführen: einmal für `AUTH_SECRET` und einmal für `BOT_INGEST_TOKEN`. Geheimnisse niemals in GitHub, Discord oder Screenshots veröffentlichen.
@@ -90,10 +94,11 @@ Nach einem erfolgreichen Deploy folgende Bereiche testen:
 
 1. Startseite, News, Regelwerk und Team öffnen.
 2. Mit dem in `OWNER_DISCORD_ID` hinterlegten Discord-Konto anmelden.
-3. Roblox-Konto verbinden und Registrierung abschließen.
-4. Ein Ticket und eine Bewerbung erstellen.
-5. Im Staff-Panel Regel, News und Sanktion testen.
-6. Unter **Database** kontrollieren, ob Tabellen und Datensätze vorhanden sind.
+3. Roblox-Konto verbinden, Registrierung abschließen und Regeln bestätigen.
+4. Je ein Ticket der Kategorien „Technischer Support“ und „Kontaktaufnahme“ erstellen.
+5. Im Staff-Panel Ticketstatus, Regel- und News-Redaktion sowie Audit-Log testen.
+6. Im Admin-Panel Rollen, Discord-Zuordnungen, Ticketzugriffe und Website-Texte prüfen.
+7. Unter **Database** kontrollieren, ob Tabellen und Datensätze vorhanden sind.
 
 ## 6. Selbst gehosteten Discord-Bot verbinden
 
