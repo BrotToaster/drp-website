@@ -1,0 +1,12 @@
+node_modules
+.next
+.netlify
+.env
+.env.local
+coverage
+playwright-report
+test-results
+prisma/dev.db
+prisma/dev.db-journal
+*.log
+*.tsbuildinfo

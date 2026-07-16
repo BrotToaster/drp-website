@@ -1,0 +1,18 @@
+.bar {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 35%;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, #d6aa4c, #ffe09a);
+  box-shadow: 0 0 20px rgba(214, 170, 76, 0.55);
+  animation: progress 1.2s ease-in-out infinite;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); width: 25%; }
+  60% { width: 55%; }
+  100% { transform: translateX(360%); width: 25%; }
+}

@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20.19.0"
+  NETLIFY_NEXT_SKEW_PROTECTION = "true"
+
+[dev]
+  command = "npm run dev:next"
+  targetPort = 3001
+  port = 3000
+  autoLaunch = false

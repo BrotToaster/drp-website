@@ -1,0 +1,19 @@
+.shell {
+  min-height: 620px;
+  padding: 80px 0;
+}
+
+.line,
+.card {
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(255,255,255,.035), rgba(255,255,255,.085), rgba(255,255,255,.035));
+  background-size: 220% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.line { height: 18px; margin-bottom: 16px; }
+.card { height: 210px; border: 1px solid rgba(255,255,255,.06); }
+
+@keyframes shimmer {
+  to { background-position: -220% 0; }
+}

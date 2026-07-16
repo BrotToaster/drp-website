@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLAYER
+  SUPPORTER
+  MODERATOR
+  ADMIN
+  OWNER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum SanctionType {
+  WARNING
+  BAN
+}
+
+enum SanctionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model User {
+  id                    String           @id @default(cuid())
+  discordId             String?          @unique
+  email                 String?          @unique
+  name                  String
+  avatar                String?
+  robloxName            String?
+  robloxUserId          String?          @unique
+  role                  Role             @default(PLAYER)
+  registrationCompleted Boolean          @default(false)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  accounts              AuthAccount[]
+  staffProfile          StaffProfile?
+  ruleAcceptances       RuleAcceptance[]
+  tickets               Ticket[]         @relation("TicketOwner")
+  assignedTickets       Ticket[]         @relation("TicketAssignee")
+  ticketMessages        TicketMessage[]
+  applications          Application[]    @relation("ApplicationOwner")
+  reviewedApplications  Application[]    @relation("ApplicationReviewer")
+  receivedSanctions     Sanction[]       @relation("SanctionSubject")
+  issuedSanctions       Sanction[]       @relation("SanctionIssuer")
+  authoredNews          NewsPost[]
+  auditLogs             AuditLog[]
+}
+
+model AuthAccount {
+  id                String   @id @default(cuid())
+  provider          String
+  providerAccountId String
+  userId            String
+  profile           Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model StaffProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  title        String
+  department   String
+  bio          String?
+  displayOrder Int     @default(0)
+  visible      Boolean @default(true)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Rule {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  category    String
+  title       String
+  content     String
+  order       Int              @default(0)
+  version     Int              @default(1)
+  published   Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  acceptances RuleAcceptance[]
+}
+
+model RuleAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  ruleId     String
+  version    Int
+  acceptedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rule       Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ruleId, version])
+}
+
+model NewsPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String
+  content     String
+  coverLabel  String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  authorId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model Ticket {
+  id         String          @id @default(cuid())
+  number     Int             @unique
+  subject    String
+  category   String
+  priority   String          @default("NORMAL")
+  status     TicketStatus    @default(OPEN)
+  userId     String
+  assigneeId String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  user       User            @relation("TicketOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignee   User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages   TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String
+  content   String
+  internal  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  type        String            @default("WHITELIST")
+  answers     Json
+  status      ApplicationStatus @default(DRAFT)
+  userId      String
+  reviewerId  String?
+  staffNote   String?
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation("ApplicationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer    User?             @relation("ApplicationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+}
+
+model Sanction {
+  id           String         @id @default(cuid())
+  type         SanctionType
+  status       SanctionStatus @default(ACTIVE)
+  reason       String
+  evidenceUrl  String?
+  subjectId    String?
+  robloxName   String
+  robloxUserId String?
+  issuerId     String
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  subject      User?          @relation("SanctionSubject", fields: [subjectId], references: [id], onDelete: SetNull)
+  issuer       User           @relation("SanctionIssuer", fields: [issuerId], references: [id], onDelete: Restrict)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model BotRecord {
+  id             String    @id @default(cuid())
+  namespace      String
+  key            String
+  discordGuildId String?
+  data           Json
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([namespace, key])
+  @@index([namespace])
+  @@index([discordGuildId])
+}
+
+model BotEvent {
+  id             String   @id @default(cuid())
+  type           String
+  discordGuildId String?
+  source         String   @default("discord-bot")
+  data           Json
+  occurredAt     DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([type, occurredAt])
+}
