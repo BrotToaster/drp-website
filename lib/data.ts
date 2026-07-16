@@ -1,13 +1,56 @@
+import type { JSONContent } from "@tiptap/react";
+import { contentNodeSchema } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
-import { demoNews, demoRules, demoTeam, type NewsView, type RuleView, type TeamView } from "@/lib/demo-data";
+import {
+  demoNews,
+  demoRules,
+  demoTeam,
+  type NewsView,
+  type RuleView,
+  type TeamView,
+} from "@/lib/demo-data";
+
+function content(value: unknown): JSONContent {
+  const parsed = contentNodeSchema.safeParse(value);
+  return parsed.success ? parsed.data : { type: "doc", content: [{ type: "paragraph" }] };
+}
 
 export async function getPublishedRules(): Promise<RuleView[]> {
   try {
-    return await prisma.rule.findMany({
+    const rules = await prisma.rule.findMany({
       where: { published: true },
       orderBy: [{ order: "asc" }, { title: "asc" }],
-      select: { id: true, slug: true, category: true, title: true, content: true, order: true, version: true },
+      include: {
+        revisions: {
+          where: { status: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          take: 1,
+          include: {
+            media: { orderBy: { sortOrder: "asc" }, include: { media: true } },
+          },
+        },
+      },
     });
+    return rules
+      .filter((rule) => rule.revisions[0])
+      .map((rule) => ({
+        id: rule.id,
+        slug: rule.slug,
+        category: rule.category,
+        title: rule.title,
+        content: content(rule.revisions[0].content),
+        searchText: rule.revisions[0].searchText,
+        order: rule.order,
+        version: rule.version,
+        updatedAt: rule.revisions[0].updatedAt,
+        media: rule.revisions[0].media.map((item) => ({
+          id: item.media.id,
+          url: item.media.secureUrl,
+          kind: item.media.kind,
+          name: item.media.originalName,
+          caption: item.caption,
+        })),
+      }));
   } catch {
     return demoRules;
   }
@@ -18,17 +61,38 @@ export async function getPublishedNews(): Promise<NewsView[]> {
     const posts = await prisma.newsPost.findMany({
       where: { published: true },
       orderBy: { publishedAt: "desc" },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        excerpt: true,
-        content: true,
-        coverLabel: true,
-        publishedAt: true,
+      include: {
+        thumbnail: { select: { secureUrl: true } },
+        revisions: {
+          where: { status: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          take: 1,
+          include: {
+            media: { orderBy: { sortOrder: "asc" }, include: { media: true } },
+          },
+        },
       },
     });
-    return posts.map((post) => ({ ...post, publishedAt: post.publishedAt || new Date() }));
+    return posts
+      .filter((post) => post.revisions[0])
+      .map((post) => ({
+        id: post.id,
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        content: content(post.revisions[0].content),
+        coverLabel: post.coverLabel,
+        publishedAt: post.publishedAt || new Date(),
+        editedAt: post.editedAt,
+        thumbnailUrl: post.thumbnail?.secureUrl || null,
+        media: post.revisions[0].media.map((item) => ({
+          id: item.media.id,
+          url: item.media.secureUrl,
+          kind: item.media.kind,
+          name: item.media.originalName,
+          caption: item.caption,
+        })),
+      }));
   } catch {
     return demoNews;
   }

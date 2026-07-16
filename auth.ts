@@ -1,9 +1,11 @@
-import type { Prisma, Role } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Discord from "next-auth/providers/discord";
 import { verifyAccountLinkToken } from "@/lib/account-link";
+import { ensureBaseRoleAssignments } from "@/lib/role-assignments";
+import { applyDiscordRoleMappings } from "@/lib/discord-sync";
 import { prisma } from "@/lib/prisma";
 import { RobloxProvider, type RobloxProfile } from "@/lib/roblox-provider";
 
@@ -29,7 +31,6 @@ if (process.env.NODE_ENV !== "production" && process.env.AUTH_DEMO_MODE !== "fal
           id: "demo-owner",
           name: "DRP Demo-Owner",
           email: "demo@drp.local",
-          role: "OWNER",
           registrationCompleted: true,
         };
       },
@@ -43,99 +44,124 @@ function profileValue(profile: unknown, key: string) {
   return typeof value === "string" ? value : undefined;
 }
 
+function stringArray(value: Prisma.JsonValue | null | undefined) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
 async function resolveOAuthUser(
   provider: "discord" | "roblox",
   providerAccountId: string,
-  user: { name?: string | null; email?: string | null; image?: string | null } | undefined,
+  oauthUser: { name?: string | null; email?: string | null; image?: string | null } | undefined,
   profile: unknown,
 ) {
   const existingAccount = await prisma.authAccount.findUnique({
     where: { provider_providerAccountId: { provider, providerAccountId } },
     include: { user: true },
   });
-  if (existingAccount) return existingAccount.user;
 
   const cookieStore = await cookies();
-  const linkedUserId = verifyAccountLinkToken(
-    cookieStore.get("drp-account-link")?.value,
-  );
-  cookieStore.delete("drp-account-link");
+  const linkedUserId = existingAccount
+    ? undefined
+    : verifyAccountLinkToken(cookieStore.get("drp-account-link")?.value);
+  if (!existingAccount) cookieStore.delete("drp-account-link");
 
-  let target =
-    linkedUserId
-      ? await prisma.user.findUnique({ where: { id: linkedUserId } })
-      : provider === "discord"
-        ? await prisma.user.findUnique({ where: { discordId: providerAccountId } })
-        : await prisma.user.findUnique({ where: { robloxUserId: providerAccountId } });
+  let existingUser = existingAccount?.user;
+  if (!existingUser) {
+    existingUser =
+      (linkedUserId
+        ? await prisma.user.findUnique({ where: { id: linkedUserId } })
+        : provider === "discord"
+          ? await prisma.user.findUnique({ where: { discordId: providerAccountId } })
+          : await prisma.user.findUnique({ where: { robloxUserId: providerAccountId } })) ||
+      undefined;
+  }
 
-  const robloxProfile = profile as RobloxProfile | undefined;
+  const roblox = profile as RobloxProfile | undefined;
+  const discordUsername = profileValue(profile, "username") || oauthUser?.name || null;
+  const discordDisplayName =
+    profileValue(profile, "global_name") || discordUsername || null;
+  const robloxUsername =
+    roblox?.preferred_username || roblox?.name || oauthUser?.name || null;
+  const robloxDisplayName = roblox?.nickname || robloxUsername || null;
   const displayName =
-    provider === "roblox"
-      ? robloxProfile?.preferred_username || robloxProfile?.nickname || user?.name
-      : profileValue(profile, "global_name") || user?.name;
+    provider === "discord" ? discordDisplayName : robloxDisplayName;
 
-  if (!target) {
-    target = await prisma.user.create({
-      data: {
-        name: displayName || "DRP Mitglied",
-        email: user?.email || null,
-        avatar: user?.image || robloxProfile?.picture || null,
-        discordId: provider === "discord" ? providerAccountId : null,
-        robloxUserId: provider === "roblox" ? providerAccountId : null,
-        robloxName:
-          provider === "roblox"
-            ? robloxProfile?.preferred_username || user?.name || null
-            : null,
-        role:
-          provider === "discord" &&
-          providerAccountId === process.env.OWNER_DISCORD_ID
-            ? "OWNER"
-            : "PLAYER",
+  return prisma.$transaction(async (tx) => {
+    const userData = {
+      name: displayName || existingUser?.name || "DRP Mitglied",
+      email: oauthUser?.email || existingUser?.email || null,
+      avatar: oauthUser?.image || roblox?.picture || existingUser?.avatar || null,
+      discordId:
+        provider === "discord" ? providerAccountId : existingUser?.discordId || null,
+      discordUsername:
+        provider === "discord" ? discordUsername : existingUser?.discordUsername || null,
+      discordDisplayName:
+        provider === "discord"
+          ? discordDisplayName
+          : existingUser?.discordDisplayName || null,
+      robloxUserId:
+        provider === "roblox" ? providerAccountId : existingUser?.robloxUserId || null,
+      robloxName:
+        provider === "roblox" ? robloxUsername : existingUser?.robloxName || null,
+      robloxDisplayName:
+        provider === "roblox"
+          ? robloxDisplayName
+          : existingUser?.robloxDisplayName || null,
+    };
+
+    let target = existingUser
+      ? await tx.user.update({ where: { id: existingUser.id }, data: userData })
+      : await tx.user.create({ data: userData });
+
+    await tx.authAccount.upsert({
+      where: { provider_providerAccountId: { provider, providerAccountId } },
+      update: {
+        userId: target.id,
+        profile: (profile || undefined) as Prisma.InputJsonValue | undefined,
+      },
+      create: {
+        provider,
+        providerAccountId,
+        userId: target.id,
+        profile: (profile || undefined) as Prisma.InputJsonValue | undefined,
       },
     });
-  } else {
-    target = await prisma.user.update({
-      where: { id: target.id },
-      data: {
-        name: displayName || target.name,
-        email: user?.email || target.email,
-        avatar: user?.image || robloxProfile?.picture || target.avatar,
-        discordId:
-          provider === "discord" ? providerAccountId : target.discordId,
-        robloxUserId:
-          provider === "roblox" ? providerAccountId : target.robloxUserId,
-        robloxName:
-          provider === "roblox"
-            ? robloxProfile?.preferred_username || user?.name || target.robloxName
-            : target.robloxName,
-      },
+
+    await ensureBaseRoleAssignments(tx, target.id, target.discordId);
+
+    if (target.discordId) {
+      const snapshot = await tx.discordMemberSnapshot.findFirst({
+        where: { discordId: target.discordId },
+        orderBy: { lastSyncedAt: "desc" },
+      });
+      if (snapshot) {
+        await applyDiscordRoleMappings(
+          tx,
+          target.id,
+          snapshot.guildId,
+          stringArray(snapshot.roleIds),
+        );
+      }
+    }
+
+    const linkedProviders = await tx.authAccount.findMany({
+      where: { userId: target.id, provider: { in: ["discord", "roblox"] } },
+      select: { provider: true },
     });
-  }
+    const completed =
+      linkedProviders.some((item) => item.provider === "discord") &&
+      linkedProviders.some((item) => item.provider === "roblox");
 
-  await prisma.authAccount.create({
-    data: {
-      provider,
-      providerAccountId,
-      userId: target.id,
-      profile: (profile || undefined) as Prisma.InputJsonValue | undefined,
-    },
+    if (completed !== target.registrationCompleted) {
+      target = await tx.user.update({
+        where: { id: target.id },
+        data: { registrationCompleted: completed },
+      });
+    }
+    return target;
   });
-
-  const linkedProviders = await prisma.authAccount.findMany({
-    where: { userId: target.id, provider: { in: ["discord", "roblox"] } },
-    select: { provider: true },
-  });
-  const completed =
-    linkedProviders.some((item) => item.provider === "discord") &&
-    linkedProviders.some((item) => item.provider === "roblox");
-
-  if (completed !== target.registrationCompleted) {
-    target = await prisma.user.update({
-      where: { id: target.id },
-      data: { registrationCompleted: completed },
-    });
-  }
-  return target;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -159,15 +185,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             profile,
           );
           token.sub = stored.id;
-          token.role = stored.role;
           token.registrationCompleted = stored.registrationCompleted;
         } catch (error) {
           console.error("OAuth account resolution failed", error);
-          token.role = "PLAYER";
           token.registrationCompleted = false;
         }
       } else if (user) {
-        token.role = user.role || "PLAYER";
         token.registrationCompleted = user.registrationCompleted ?? true;
       }
       return token;
@@ -175,7 +198,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub || "unknown";
-        session.user.role = (token.role || "PLAYER") as Role;
         session.user.registrationCompleted = Boolean(token.registrationCompleted);
       }
       return session;

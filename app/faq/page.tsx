@@ -3,28 +3,23 @@ import { PageIntro } from "@/components/ui";
 
 export const metadata: Metadata = { title: "FAQ" };
 
-const questions = [
-  ["Wie kann ich dem Server beitreten?", "Tritt zuerst unserem Discord bei, lies das Regelwerk und verbinde anschließend deinen Roblox-Namen im Dashboard."],
-  ["Benötige ich eine Whitelist?", "Je nach aktueller Serverphase kann eine kurze Bewerbung erforderlich sein. Den Status siehst du direkt in deinem Dashboard."],
-  ["Wo kann ich einen Spieler melden?", "Erstelle im Dashboard ein Ticket der Kategorie „Spielermeldung“ und füge alle verfügbaren Beweise hinzu."],
-  ["Wie kann ich gegen eine Sanktion Einspruch einlegen?", "Nutze ein Ticket der Kategorie „Entbannungsantrag“. Ein unbeteiligtes Staff-Mitglied prüft den Vorgang."],
-  ["Kann ich mich als Staff bewerben?", "Offene Staff- und Fraktionsbewerbungen werden über News und Discord angekündigt."],
+const items = [
+  ["Wie komme ich auf den Server?", "Tritt unserem Discord bei, verbinde Discord und Roblox und bestätige anschließend das aktuelle Regelwerk im Dashboard."],
+  ["Wie erreiche ich den Support?", "Erstelle im Dashboard ein Ticket als „Technischer Support“ oder „Kontaktaufnahme“. Dort siehst du jederzeit den Bearbeitungsstand."],
+  ["Warum muss ich Discord und Roblox verbinden?", "Die Verknüpfung ordnet deine Community- und Spielidentität eindeutig zu, ohne dass DRP deine Passwörter erhält."],
+  ["Wo sehe ich Regeländerungen?", "Jede Regel zeigt ihre Version und letzte Bearbeitung. Nach einer neuen Veröffentlichung ist eine erneute Bestätigung erforderlich."],
 ];
 
 export default function FaqPage() {
   return (
     <>
-      <PageIntro eyebrow="Häufige Fragen" title="Schnell zur richtigen Antwort." copy="Alles Wichtige rund um Einstieg, Support und das gemeinsame Roleplay." />
+      <PageIntro eyebrow="Hilfe" title="Häufige Fragen." copy="Die wichtigsten Antworten rund um deinen Einstieg bei DRP." />
       <section className="section-space">
-        <div className="container-shell max-w-4xl space-y-3">
-          {questions.map(([question, answer], index) => (
+        <div className="container-shell grid max-w-4xl gap-3">
+          {items.map(([question, answer]) => (
             <details key={question} className="surface group p-6">
-              <summary className="flex cursor-pointer list-none items-center gap-5 font-semibold">
-                <span className="text-xs text-[#efc76e]">0{index + 1}</span>
-                <span>{question}</span>
-                <span className="ml-auto text-[#686e72] transition group-open:rotate-45">+</span>
-              </summary>
-              <p className="ml-9 mt-5 max-w-2xl text-sm leading-7 text-[#92989c]">{answer}</p>
+              <summary className="cursor-pointer list-none font-semibold">{question}</summary>
+              <p className="mt-4 text-sm leading-7 text-[#9da3a8]">{answer}</p>
             </details>
           ))}
         </div>

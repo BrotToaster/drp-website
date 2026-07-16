@@ -7,12 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  PLAYER
-  SUPPORTER
-  MODERATOR
-  ADMIN
-  OWNER
+enum AssignmentSource {
+  MANUAL
+  DISCORD
+  SYSTEM
+}
+
+enum RevisionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+}
+
+enum MediaKind {
+  IMAGE
+  AUDIO
+  VIDEO
 }
 
 enum TicketStatus {
@@ -23,49 +33,33 @@ enum TicketStatus {
   CLOSED
 }
 
-enum ApplicationStatus {
-  DRAFT
-  SUBMITTED
-  UNDER_REVIEW
-  ACCEPTED
-  REJECTED
-}
-
-enum SanctionType {
-  WARNING
-  BAN
-}
-
-enum SanctionStatus {
-  ACTIVE
-  REVOKED
-  EXPIRED
-}
-
 model User {
-  id                    String           @id @default(cuid())
-  discordId             String?          @unique
-  email                 String?          @unique
-  name                  String
-  avatar                String?
-  robloxName            String?
-  robloxUserId          String?          @unique
-  role                  Role             @default(PLAYER)
-  registrationCompleted Boolean          @default(false)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-  accounts              AuthAccount[]
-  staffProfile          StaffProfile?
-  ruleAcceptances       RuleAcceptance[]
-  tickets               Ticket[]         @relation("TicketOwner")
-  assignedTickets       Ticket[]         @relation("TicketAssignee")
-  ticketMessages        TicketMessage[]
-  applications          Application[]    @relation("ApplicationOwner")
-  reviewedApplications  Application[]    @relation("ApplicationReviewer")
-  receivedSanctions     Sanction[]       @relation("SanctionSubject")
-  issuedSanctions       Sanction[]       @relation("SanctionIssuer")
-  authoredNews          NewsPost[]
-  auditLogs             AuditLog[]
+  id                     String               @id @default(cuid())
+  discordId              String?              @unique
+  discordUsername        String?
+  discordDisplayName     String?
+  email                  String?              @unique
+  name                   String
+  avatar                 String?
+  robloxName             String?
+  robloxDisplayName      String?
+  robloxUserId           String?              @unique
+  registrationCompleted  Boolean              @default(false)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  accounts               AuthAccount[]
+  staffProfile           StaffProfile?
+  ruleAcceptances        RuleAcceptance[]
+  tickets                Ticket[]             @relation("TicketOwner")
+  assignedTickets        Ticket[]             @relation("TicketAssignee")
+  ticketMessages         TicketMessage[]
+  authoredNews           NewsPost[]
+  auditLogs              AuditLog[]
+  roleAssignments        UserRoleAssignment[] @relation("UserRoleAssignments")
+  grantedRoleAssignments UserRoleAssignment[] @relation("RoleAssignmentActor")
+  ruleRevisions          RuleRevision[]       @relation("RuleRevisionEditor")
+  newsRevisions          NewsRevision[]       @relation("NewsRevisionEditor")
+  uploadedMedia          MediaAsset[]         @relation("MediaUploader")
 }
 
 model AuthAccount {
@@ -94,18 +88,170 @@ model StaffProfile {
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model AccessRole {
+  id              String                     @id @default(cuid())
+  key             String                     @unique
+  name            String                     @unique
+  description     String?
+  color           String                     @default("#d6aa4c")
+  priority        Int                        @default(0)
+  isSystem        Boolean                    @default(false)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  permissions     RolePermission[]
+  assignments     UserRoleAssignment[]
+  discordMappings DiscordRoleMapping[]
+  ticketAccesses  RoleTicketCategoryAccess[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  label       String
+  description String?
+  group       String
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         AccessRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRoleAssignment {
+  id           String           @id @default(cuid())
+  userId       String
+  roleId       String
+  source       AssignmentSource
+  sourceKey    String           @default("")
+  assignedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation("UserRoleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  role         AccessRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy   User?            @relation("RoleAssignmentActor", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId, source, sourceKey])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model DiscordRole {
+  id            String               @id @default(cuid())
+  guildId       String
+  discordRoleId String
+  name          String
+  color         String?
+  position      Int                  @default(0)
+  managed       Boolean              @default(false)
+  lastSyncedAt  DateTime             @default(now())
+  mappings      DiscordRoleMapping[]
+
+  @@unique([guildId, discordRoleId])
+  @@index([guildId, position])
+}
+
+model DiscordRoleMapping {
+  id            String      @id @default(cuid())
+  discordRoleId String
+  accessRoleId  String
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  discordRole   DiscordRole @relation(fields: [discordRoleId], references: [id], onDelete: Cascade)
+  accessRole    AccessRole  @relation(fields: [accessRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([discordRoleId, accessRoleId])
+}
+
+model DiscordMemberSnapshot {
+  id           String   @id @default(cuid())
+  guildId      String
+  discordId    String
+  username     String
+  displayName  String?
+  avatarUrl    String?
+  roleIds      Json
+  lastSyncedAt DateTime @default(now())
+
+  @@unique([guildId, discordId])
+  @@index([discordId])
+}
+
+model TicketCategory {
+  id          String                     @id @default(cuid())
+  key         String                     @unique
+  label       String
+  description String?
+  enabled     Boolean                    @default(true)
+  sortOrder   Int                        @default(0)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  tickets     Ticket[]
+  roleAccess  RoleTicketCategoryAccess[]
+}
+
+model RoleTicketCategoryAccess {
+  id         String         @id @default(cuid())
+  roleId     String
+  categoryId String
+  canView    Boolean        @default(false)
+  canReply   Boolean        @default(false)
+  canAssign  Boolean        @default(false)
+  canStatus  Boolean        @default(false)
+  role       AccessRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  category   TicketCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, categoryId])
+}
+
 model Rule {
   id          String           @id @default(cuid())
   slug        String           @unique
+  sourceKey   String?          @unique
+  sourceUrl   String?
   category    String
   title       String
-  content     String
   order       Int              @default(0)
-  version     Int              @default(1)
-  published   Boolean          @default(true)
+  version     Int              @default(0)
+  published   Boolean          @default(false)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   acceptances RuleAcceptance[]
+  revisions   RuleRevision[]
+}
+
+model RuleRevision {
+  id          String              @id @default(cuid())
+  ruleId      String
+  status      RevisionStatus      @default(DRAFT)
+  content     Json
+  searchText  String
+  editorId    String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  publishedAt DateTime?
+  rule        Rule                @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  editor      User?               @relation("RuleRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+  media       RuleRevisionMedia[]
+
+  @@index([ruleId, status, publishedAt])
+}
+
+model RuleRevisionMedia {
+  id         String       @id @default(cuid())
+  revisionId String
+  mediaId    String
+  sortOrder  Int          @default(0)
+  caption    String?
+  revision   RuleRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  media      MediaAsset   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([revisionId, mediaId])
 }
 
 model RuleAcceptance {
@@ -121,34 +267,89 @@ model RuleAcceptance {
 }
 
 model NewsPost {
-  id          String    @id @default(cuid())
-  slug        String    @unique
+  id          String         @id @default(cuid())
+  slug        String         @unique
   title       String
   excerpt     String
-  content     String
   coverLabel  String?
-  published   Boolean   @default(false)
+  published   Boolean        @default(false)
   publishedAt DateTime?
+  editedAt    DateTime?
   authorId    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  thumbnailId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  author      User?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  thumbnail   MediaAsset?    @relation("NewsThumbnail", fields: [thumbnailId], references: [id], onDelete: SetNull)
+  revisions   NewsRevision[]
+}
+
+model NewsRevision {
+  id          String              @id @default(cuid())
+  newsPostId  String
+  status      RevisionStatus      @default(DRAFT)
+  content     Json
+  searchText  String
+  editorId    String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  publishedAt DateTime?
+  newsPost    NewsPost            @relation(fields: [newsPostId], references: [id], onDelete: Cascade)
+  editor      User?               @relation("NewsRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+  media       NewsRevisionMedia[]
+
+  @@index([newsPostId, status, publishedAt])
+}
+
+model NewsRevisionMedia {
+  id         String       @id @default(cuid())
+  revisionId String
+  mediaId    String
+  sortOrder  Int          @default(0)
+  caption    String?
+  revision   NewsRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  media      MediaAsset   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([revisionId, mediaId])
+}
+
+model MediaAsset {
+  id             String              @id @default(cuid())
+  publicId       String              @unique
+  secureUrl      String
+  resourceType   String
+  kind           MediaKind
+  mimeType       String
+  originalName   String
+  bytes          Int
+  width          Int?
+  height         Int?
+  duration       Float?
+  createdById    String?
+  createdAt      DateTime            @default(now())
+  createdBy      User?               @relation("MediaUploader", fields: [createdById], references: [id], onDelete: SetNull)
+  ruleRevisions  RuleRevisionMedia[]
+  newsRevisions  NewsRevisionMedia[]
+  newsThumbnails NewsPost[]          @relation("NewsThumbnail")
 }
 
 model Ticket {
   id         String          @id @default(cuid())
   number     Int             @unique
   subject    String
-  category   String
+  categoryId String
   priority   String          @default("NORMAL")
   status     TicketStatus    @default(OPEN)
   userId     String
   assigneeId String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
+  category   TicketCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   user       User            @relation("TicketOwner", fields: [userId], references: [id], onDelete: Cascade)
   assignee   User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   messages   TicketMessage[]
+
+  @@index([categoryId, status, updatedAt])
 }
 
 model TicketMessage {
@@ -162,39 +363,6 @@ model TicketMessage {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
-model Application {
-  id          String            @id @default(cuid())
-  type        String            @default("WHITELIST")
-  answers     Json
-  status      ApplicationStatus @default(DRAFT)
-  userId      String
-  reviewerId  String?
-  staffNote   String?
-  submittedAt DateTime?
-  reviewedAt  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  user        User              @relation("ApplicationOwner", fields: [userId], references: [id], onDelete: Cascade)
-  reviewer    User?             @relation("ApplicationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
-}
-
-model Sanction {
-  id           String         @id @default(cuid())
-  type         SanctionType
-  status       SanctionStatus @default(ACTIVE)
-  reason       String
-  evidenceUrl  String?
-  subjectId    String?
-  robloxName   String
-  robloxUserId String?
-  issuerId     String
-  expiresAt    DateTime?
-  revokedAt    DateTime?
-  createdAt    DateTime       @default(now())
-  subject      User?          @relation("SanctionSubject", fields: [subjectId], references: [id], onDelete: SetNull)
-  issuer       User           @relation("SanctionIssuer", fields: [issuerId], references: [id], onDelete: Restrict)
-}
-
 model AuditLog {
   id         String   @id @default(cuid())
   actorId    String?
@@ -206,6 +374,9 @@ model AuditLog {
   actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model SiteSetting {
@@ -232,6 +403,7 @@ model BotRecord {
 
 model BotEvent {
   id             String   @id @default(cuid())
+  externalId     String?  @unique
   type           String
   discordGuildId String?
   source         String   @default("discord-bot")
@@ -240,4 +412,11 @@ model BotEvent {
   createdAt      DateTime @default(now())
 
   @@index([type, occurredAt])
+}
+
+model BotSyncReceipt {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  kind       String
+  createdAt  DateTime @default(now())
 }

@@ -1,24 +1,21 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/status-pill";
+import { RuleRotator } from "@/components/rule-rotator";
 import { ArrowLink, SectionHeading } from "@/components/ui";
 import { getPublishedNews, getPublishedRules } from "@/lib/data";
 import { getPublicServerStatus } from "@/lib/erlc";
-import { formatDate, siteConfig } from "@/lib/site";
+import { formatDate } from "@/lib/site";
+import { getHomepageSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
-const departments = [
-  { code: "LCSO", name: "Sheriff's Office", copy: "Schütze Liberty County und sorge mit deinem Team für Sicherheit." },
-  { code: "RCPD", name: "River City Police", copy: "Stadtpolizei mit klaren Strukturen und anspruchsvollen Einsätzen." },
-  { code: "LCFD", name: "Fire & Rescue", copy: "Rette Leben, bekämpfe Brände und koordiniere komplexe Notfälle." },
-  { code: "DOT", name: "Department of Transportation", copy: "Sichere Straßen, berge Fahrzeuge und halte den Verkehr am Laufen." },
-];
 
 export default async function HomePage() {
-  const [status, news, rules] = await Promise.all([
+  const [status, news, rules, homepage] = await Promise.all([
     getPublicServerStatus(),
     getPublishedNews(),
     getPublishedRules(),
+    getHomepageSettings(),
   ]);
 
   return (
@@ -36,7 +33,7 @@ export default async function HomePage() {
               starken Fraktionen und einer Community, die Qualität ernst nimmt.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <a href={siteConfig.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">
+              <a href={homepage.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">
                 Community beitreten <span aria-hidden="true">↗</span>
               </a>
               <Link href="/server" className="button button-secondary">
@@ -45,7 +42,6 @@ export default async function HomePage() {
             </div>
             <div className="mt-12 flex flex-wrap gap-x-10 gap-y-4 text-xs text-[#858b90]">
               <span><strong className="mr-2 text-white">24/7</strong> Community-Support</span>
-              <span><strong className="mr-2 text-white">4</strong> Hauptfraktionen</span>
               <span><strong className="mr-2 text-white">100%</strong> Fair Play</span>
             </div>
           </div>
@@ -103,8 +99,8 @@ export default async function HomePage() {
             title="Wo beginnt deine Geschichte?"
             copy="Wähle deinen Weg, entwickle deinen Charakter und werde Teil eines lebendigen Liberty County."
           />
-          <div className="mt-12 grid gap-4 md:grid-cols-2">
-            {departments.map((department, index) => (
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+            {homepage.departments.map((department, index) => (
               <article key={department.code} className="surface surface-interactive group p-7 md:p-8">
                 <div className="flex items-start justify-between">
                   <span className="badge badge-gold">{department.code}</span>
@@ -125,19 +121,8 @@ export default async function HomePage() {
             title="Gutes Roleplay beginnt mit Fairness."
             copy="Unser Regelwerk schützt kreative Geschichten und sorgt dafür, dass jede Situation für alle Beteiligten nachvollziehbar bleibt."
           />
-          <div className="grid gap-3">
-            {rules.slice(0, 3).map((rule, index) => (
-              <Link key={rule.id} href={"/regelwerk#" + rule.slug} className="surface surface-interactive flex items-center gap-5 p-5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.04] text-xs font-bold text-[#efc76e]">
-                  0{index + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#777d81]">{rule.category}</p>
-                  <p className="mt-1 truncate font-semibold">{rule.title}</p>
-                </div>
-                <span className="ml-auto text-[#656b6f]">→</span>
-              </Link>
-            ))}
+          <div>
+            <RuleRotator rules={rules} />
             <div className="mt-4"><ArrowLink href="/regelwerk">Vollständiges Regelwerk lesen</ArrowLink></div>
           </div>
         </div>
@@ -146,7 +131,7 @@ export default async function HomePage() {
       <section className="section-space">
         <div className="container-shell">
           <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading eyebrow="Neuigkeiten" title="Aus der Community." />
+            <SectionHeading eyebrow="Neuigkeiten" title="Was neu bei DRP ist." />
             <ArrowLink href="/news">Alle Neuigkeiten</ArrowLink>
           </div>
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
@@ -176,7 +161,7 @@ export default async function HomePage() {
               <h2 className="section-title mt-5">Deine nächste Schicht beginnt jetzt.</h2>
               <p className="body-large mt-5">Komm auf unseren Discord, lies das Regelwerk und werde Teil von DRP.</p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <a href={siteConfig.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">Discord beitreten</a>
+                <a href={homepage.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">Discord beitreten</a>
                 <Link href="/regelwerk" className="button button-secondary">Regelwerk lesen</Link>
               </div>
             </div>

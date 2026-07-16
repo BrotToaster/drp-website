@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RichContent } from "@/components/rich-content";
+import { MediaGallery } from "@/components/media-gallery";
 import type { RuleView } from "@/lib/demo-data";
+import { formatDate } from "@/lib/site";
 
 export function RuleExplorer({ rules }: { rules: RuleView[] }) {
   const [query, setQuery] = useState("");
@@ -12,18 +15,14 @@ export function RuleExplorer({ rules }: { rules: RuleView[] }) {
     return rules.filter(
       (rule) =>
         (category === "Alle" || rule.category === category) &&
-        (!term ||
-          rule.title.toLowerCase().includes(term) ||
-          rule.content.toLowerCase().includes(term)),
+        (!term || rule.searchText.toLowerCase().includes(term)),
     );
   }, [rules, query, category]);
 
   return (
     <div>
       <div className="surface mb-8 grid gap-4 p-4 md:grid-cols-[1fr_auto]">
-        <label className="sr-only" htmlFor="rule-search">
-          Regelwerk durchsuchen
-        </label>
+        <label className="sr-only" htmlFor="rule-search">Regelwerk durchsuchen</label>
         <input
           id="rule-search"
           className="field"
@@ -49,25 +48,22 @@ export function RuleExplorer({ rules }: { rules: RuleView[] }) {
       </div>
 
       <div className="grid gap-4">
-        {filtered.map((rule, index) => (
-          <article key={rule.id} id={rule.slug} className="surface p-6 md:p-8">
+        {filtered.map((rule) => (
+          <article key={rule.id} id={rule.slug} className="surface scroll-mt-36 p-6 md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex gap-4">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#d6aa4c]/10 text-xs font-bold text-[#efc76e]">
-                  {String(index + 1).padStart(2, "0")}
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#858b90]">
+                  {rule.category}
                 </span>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#858b90]">
-                    {rule.category}
-                  </span>
-                  <h2 className="mt-1 text-xl font-semibold tracking-tight">{rule.title}</h2>
-                </div>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">{rule.title}</h2>
               </div>
-              <span className="badge">Version {rule.version}</span>
+              <div className="text-right">
+                <span className="badge">Version {rule.version}</span>
+                <p className="mt-2 text-[11px] text-[#6f7579]">Stand {formatDate(rule.updatedAt)}</p>
+              </div>
             </div>
-            <p className="ml-0 mt-5 max-w-3xl text-[15px] leading-7 text-[#aeb2b5] md:ml-[52px]">
-              {rule.content}
-            </p>
+            <RichContent content={rule.content} />
+            <MediaGallery media={rule.media} />
           </article>
         ))}
         {!filtered.length && (

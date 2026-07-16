@@ -1,91 +1,162 @@
+import { readFile } from "node:fs/promises";
 import { PrismaClient } from "@prisma/client";
 
-const datasourceUrl =
-  process.env.NETLIFY_DB_URL?.trim() || process.env.DATABASE_URL?.trim();
-
+const datasourceUrl = process.env.NETLIFY_DB_URL?.trim() || process.env.DATABASE_URL?.trim();
 if (!datasourceUrl || !/^postgres(?:ql)?:\/\//i.test(datasourceUrl)) {
-  throw new Error(
-    "Zum Seeden wird eine PostgreSQL-URL in NETLIFY_DB_URL oder DATABASE_URL benötigt.",
-  );
+  throw new Error("Zum Seeden wird eine PostgreSQL-URL in NETLIFY_DB_URL oder DATABASE_URL benötigt.");
+}
+const prisma = new PrismaClient({ datasourceUrl });
+const fixture = JSON.parse(await readFile(new URL("../data/rules.fixture.json", import.meta.url), "utf8"));
+
+const permissionDefinitions = [
+  ["staff.access", "Staff-Panel öffnen", "Zugang"],
+  ["admin.access", "Admin-Panel öffnen", "Zugang"],
+  ["tickets.view", "Tickets anzeigen", "Tickets"],
+  ["tickets.reply", "Auf Tickets antworten", "Tickets"],
+  ["tickets.assign", "Tickets zuweisen", "Tickets"],
+  ["tickets.status", "Ticketstatus ändern", "Tickets"],
+  ["users.view", "Nutzer anzeigen", "Nutzer"],
+  ["users.roles.assign", "Nutzerrollen zuweisen", "Nutzer"],
+  ["rules.view", "Regelverwaltung anzeigen", "Regelwerk"],
+  ["rules.create", "Regeln erstellen", "Regelwerk"],
+  ["rules.edit", "Regeln bearbeiten", "Regelwerk"],
+  ["rules.delete", "Regeln löschen", "Regelwerk"],
+  ["rules.publish", "Regeln veröffentlichen", "Regelwerk"],
+  ["news.view", "Newsverwaltung anzeigen", "News"],
+  ["news.create", "News erstellen", "News"],
+  ["news.edit", "News bearbeiten", "News"],
+  ["news.delete", "News löschen", "News"],
+  ["news.publish", "News veröffentlichen", "News"],
+  ["audit.view", "Audit-Log anzeigen", "Kontrolle"],
+  ["roles.manage", "Rollen und Rechte verwalten", "Administration"],
+  ["discord.manage", "Discord-Zuordnungen verwalten", "Administration"],
+  ["tickets.manage_categories", "Ticketkategorien verwalten", "Administration"],
+  ["site.manage", "Website-Inhalte verwalten", "Administration"],
+  ["integrations.view", "Integrationen anzeigen", "Administration"],
+];
+
+const roleDefinitions = [
+  ["PLAYER", "Player", "#7d858c", 0],
+  ["SUPPORTER", "Supporter", "#57c98c", 20],
+  ["MODERATOR", "Moderator", "#63a8ff", 40],
+  ["ADMIN", "Admin", "#efc76e", 60],
+  ["OWNER", "Owner", "#ef6b6b", 100],
+];
+
+const rolePermissionKeys = {
+  PLAYER: [],
+  SUPPORTER: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view"],
+  MODERATOR: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view", "rules.view", "news.view", "audit.view"],
+  ADMIN: permissionDefinitions.map(([key]) => key).filter((key) => key !== "roles.manage"),
+  OWNER: permissionDefinitions.map(([key]) => key),
+};
+
+function paragraph(text) {
+  return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
 }
 
-const prisma = new PrismaClient({ datasourceUrl });
-
-const rules = [
-  ["respekt-und-umgang", "Grundregeln", "Respekt und Umgang", "Behandle alle Spieler respektvoll. Beleidigungen, Diskriminierung, Provokationen und gezieltes Stören des Spielerlebnisses werden nicht toleriert.", 1, 2],
-  ["roleplay-qualitaet", "Roleplay", "Roleplay-Qualität", "Handle nachvollziehbar, bleibe in deiner Rolle und gib jeder Situation Raum zur Entwicklung. Unrealistisches Verhalten und Fail-RP sind untersagt.", 2, 3],
-  ["rdm-und-vdm", "Roleplay", "RDM und VDM", "Das grundlose Töten oder Anfahren anderer Spieler ist verboten. Gewalt benötigt immer einen plausiblen Roleplay-Hintergrund.", 3, 1],
-  ["verfolgungen", "Einsatzregeln", "Verfolgungen", "Verfolgungen müssen fair und verhältnismäßig ausgespielt werden. Glitching und unrealistische Fahrmanöver sind verboten.", 4, 2],
-  ["kommunikation", "Kommunikation", "Kommunikation", "Nutze die vorgesehenen Funk- und Sprachkanäle. Metagaming, Streamsniping und das Weitergeben interner Informationen sind untersagt.", 5, 1],
-  ["staff-anweisungen", "Support", "Staff-Anweisungen", "Den sachlichen Anweisungen des Staff-Teams ist Folge zu leisten. Entscheidungen können anschließend ruhig über ein Ticket überprüft werden.", 6, 1],
-];
-
-const news = [
-  ["willkommen-bei-drp", "Willkommen bei DRP", "Unser neues Serverportal ist da – klarer, schneller und näher an der Community.", "Mit dem neuen Portal bündeln wir Regelwerk, Bewerbungen, Support und alle wichtigen Serverinformationen an einem Ort.", "Community", "2026-07-12T18:00:00.000Z"],
-  ["fraktionsbewerbungen", "Fraktionsbewerbungen geöffnet", "Sheriff, Police, Fire und DOT suchen engagierte Mitglieder.", "Die nächste Bewerbungsphase läuft. Lies die Anforderungen und sende deine Bewerbung direkt über dein Dashboard ein.", "Bewerbung", "2026-07-08T14:30:00.000Z"],
-  ["regelwerk-update", "Regelwerk 2.3", "Klarere Einsatzregeln und neue Hinweise für Verfolgungssituationen.", "Das Regelwerk wurde sprachlich geschärft. Bestehende Grundsätze bleiben erhalten, einige Beispiele wurden ergänzt.", "Update", "2026-07-02T16:00:00.000Z"],
-];
-
 async function main() {
+  const permissions = new Map();
+  for (const [key, label, group] of permissionDefinitions) {
+    const item = await prisma.permission.upsert({
+      where: { key },
+      update: { label, group },
+      create: { key, label, group },
+    });
+    permissions.set(key, item);
+  }
+
+  const roles = new Map();
+  for (const [key, name, color, priority] of roleDefinitions) {
+    const role = await prisma.accessRole.upsert({
+      where: { key },
+      update: { name, color, priority, isSystem: true },
+      create: { key, name, color, priority, isSystem: true },
+    });
+    roles.set(key, role);
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    await prisma.rolePermission.createMany({
+      data: rolePermissionKeys[key].map((permissionKey) => ({
+        roleId: role.id,
+        permissionId: permissions.get(permissionKey).id,
+      })),
+    });
+  }
+
+  const categories = [];
+  for (const data of [
+    { key: "TECHNICAL", label: "Technischer Support", description: "Technische Probleme mit Website, Discord oder Serverzugang", sortOrder: 10 },
+    { key: "CONTACT", label: "Kontaktaufnahme", description: "Allgemeine Kontaktaufnahme mit dem DRP-Team", sortOrder: 20 },
+  ]) {
+    categories.push(await prisma.ticketCategory.upsert({ where: { key: data.key }, update: data, create: data }));
+  }
+  for (const roleKey of ["SUPPORTER", "MODERATOR", "ADMIN", "OWNER"]) {
+    for (const category of categories) {
+      const role = roles.get(roleKey);
+      await prisma.roleTicketCategoryAccess.upsert({
+        where: { roleId_categoryId: { roleId: role.id, categoryId: category.id } },
+        update: { canView: true, canReply: true, canAssign: true, canStatus: true },
+        create: { roleId: role.id, categoryId: category.id, canView: true, canReply: true, canAssign: true, canStatus: true },
+      });
+    }
+  }
+
   const owner = await prisma.user.upsert({
     where: { id: "demo-owner" },
-    update: { role: "OWNER", registrationCompleted: true },
-    create: {
-      id: "demo-owner",
-      name: "DRP Demo-Owner",
-      email: "demo@drp.local",
-      role: "OWNER",
-      registrationCompleted: true,
-    },
+    update: { registrationCompleted: true },
+    create: { id: "demo-owner", name: "DRP Demo-Owner", registrationCompleted: true },
   });
-
-  for (const [slug, category, title, content, order, version] of rules) {
-    await prisma.rule.upsert({
-      where: { slug },
-      update: { category, title, content, order, version, published: true },
-      create: { slug, category, title, content, order, version, published: true },
+  for (const roleKey of ["PLAYER", "OWNER"]) {
+    const role = roles.get(roleKey);
+    const sourceKey = roleKey === "OWNER" ? "owner-env" : "default-player";
+    await prisma.userRoleAssignment.upsert({
+      where: { userId_roleId_source_sourceKey: { userId: owner.id, roleId: role.id, source: "SYSTEM", sourceKey } },
+      update: {},
+      create: { userId: owner.id, roleId: role.id, source: "SYSTEM", sourceKey },
     });
   }
 
-  for (const [slug, title, excerpt, content, coverLabel, publishedAt] of news) {
-    await prisma.newsPost.upsert({
-      where: { slug },
-      update: { title, excerpt, content, coverLabel, published: true, publishedAt: new Date(publishedAt), authorId: owner.id },
-      create: { slug, title, excerpt, content, coverLabel, published: true, publishedAt: new Date(publishedAt), authorId: owner.id },
+  await prisma.ruleAcceptance.deleteMany();
+  for (const rule of fixture.rules) {
+    const record = await prisma.rule.upsert({
+      where: { sourceKey: rule.sourceKey },
+      update: { slug: rule.sourceKey, sourceUrl: rule.sourceUrl, category: rule.category, title: rule.title, order: rule.order, version: 1, published: true },
+      create: { slug: rule.sourceKey, sourceKey: rule.sourceKey, sourceUrl: rule.sourceUrl, category: rule.category, title: rule.title, order: rule.order, version: 1, published: true },
     });
-  }
-
-  const team = [
-    ["seed-owner", "Mori", "Projektleitung", "Management", "Verantwortlich für Vision, Community und die langfristige Entwicklung von DRP.", 1],
-    ["seed-admin", "Alex", "Administration", "Serverleitung", "Koordiniert den Serverbetrieb und sorgt für klare interne Abläufe.", 2],
-    ["seed-mod", "Jamie", "Moderation", "Community", "Erste Anlaufstelle für Support, Konfliktklärung und Community-Fragen.", 3],
-  ];
-  for (const [id, name, title, department, bio, displayOrder] of team) {
-    const member = await prisma.user.upsert({
-      where: { id },
-      update: { name },
-      create: {
-        id,
-        name,
-        role: id === "seed-owner" ? "OWNER" : id === "seed-admin" ? "ADMIN" : "MODERATOR",
-        registrationCompleted: true,
+    await prisma.ruleRevision.deleteMany({ where: { ruleId: record.id } });
+    await prisma.ruleRevision.create({
+      data: {
+        ruleId: record.id,
+        status: "PUBLISHED",
+        content: rule.content,
+        searchText: JSON.stringify(rule.content),
+        publishedAt: new Date(),
       },
     });
-    await prisma.staffProfile.upsert({
-      where: { userId: member.id },
-      update: { title, department, bio, displayOrder, visible: true },
-      create: { userId: member.id, title, department, bio, displayOrder, visible: true },
+  }
+
+  const post = await prisma.newsPost.upsert({
+    where: { slug: "willkommen-bei-drp" },
+    update: { title: "Willkommen bei DRP", excerpt: "Das Portal bündelt Informationen, Support und Neuigkeiten.", published: true, publishedAt: new Date(), authorId: owner.id },
+    create: { slug: "willkommen-bei-drp", title: "Willkommen bei DRP", excerpt: "Das Portal bündelt Informationen, Support und Neuigkeiten.", published: true, publishedAt: new Date(), authorId: owner.id },
+  });
+  if (!(await prisma.newsRevision.count({ where: { newsPostId: post.id } }))) {
+    await prisma.newsRevision.create({
+      data: {
+        newsPostId: post.id,
+        status: "PUBLISHED",
+        content: paragraph("Willkommen bei Deutschland Roleplay. Alle wichtigen Informationen findest du jetzt an einem Ort."),
+        searchText: "Willkommen bei Deutschland Roleplay",
+        editorId: owner.id,
+        publishedAt: new Date(),
+      },
     });
   }
 
   await prisma.botRecord.upsert({
     where: { namespace_key: { namespace: "public", key: "discord" } },
     update: { data: { inviteCode: "drpg", members: 0, online: 0 } },
-    create: {
-      namespace: "public",
-      key: "discord",
-      data: { inviteCode: "drpg", members: 0, online: 0 },
-    },
+    create: { namespace: "public", key: "discord", data: { inviteCode: "drpg", members: 0, online: 0 } },
   });
 }
 

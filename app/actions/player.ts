@@ -1,37 +1,14 @@
 "use server";
 
-import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ensureDbUser } from "@/lib/authz";
+import { ensureDbUser, getAuthorizationContext } from "@/lib/authz";
+import { canAccessTicketCategory } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import {
-  applicationSchema,
-  profileSchema,
-  ticketMessageSchema,
-  ticketSchema,
-} from "@/lib/validators";
+import { ticketMessageSchema, ticketSchema } from "@/lib/validators";
 
 function formValue(formData: FormData, key: string) {
   return String(formData.get(key) || "");
-}
-
-export async function updateProfileAction(formData: FormData) {
-  const user = await ensureDbUser();
-  const parsed = profileSchema.safeParse({
-    robloxName: formValue(formData, "robloxName"),
-    robloxUserId: formValue(formData, "robloxUserId"),
-  });
-  if (!parsed.success) redirect("/dashboard/profil?error=invalid");
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      robloxName: parsed.data.robloxName,
-      robloxUserId: parsed.data.robloxUserId || null,
-    },
-  });
-  revalidatePath("/dashboard");
-  redirect("/dashboard/profil?saved=1");
 }
 
 export async function acceptRulesAction() {
@@ -67,19 +44,30 @@ export async function createTicketAction(formData: FormData) {
   });
   if (!parsed.success) redirect("/dashboard/tickets?error=invalid");
 
-  const latestTicket = await prisma.ticket.aggregate({ _max: { number: true } });
-  const ticket = await prisma.ticket.create({
-    data: {
-      number: (latestTicket._max.number || 0) + 1,
-      subject: parsed.data.subject,
-      category: parsed.data.category,
-      userId: user.id,
-      messages: {
-        create: { authorId: user.id, content: parsed.data.message },
-      },
-    },
+  const category = await prisma.ticketCategory.findUnique({
+    where: { key: parsed.data.category },
   });
-  redirect("/dashboard/tickets/" + ticket.id);
+  if (!category?.enabled) redirect("/dashboard/tickets?error=category");
+
+  const ticket = await prisma.$transaction(async (tx) => {
+    const latest = await tx.ticket.aggregate({ _max: { number: true } });
+    return tx.ticket.create({
+      data: {
+        number: (latest._max.number || 0) + 1,
+        subject: parsed.data.subject,
+        categoryId: category.id,
+        userId: user.id,
+        messages: {
+          create: { authorId: user.id, content: parsed.data.message },
+        },
+      },
+    });
+  });
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tickets");
+  revalidatePath("/staff");
+  revalidatePath("/staff/tickets");
+  redirect("/dashboard/tickets/" + ticket.id + "?created=1");
 }
 
 export async function replyTicketAction(formData: FormData) {
@@ -88,11 +76,18 @@ export async function replyTicketAction(formData: FormData) {
     ticketId: formValue(formData, "ticketId"),
     content: formValue(formData, "content"),
   });
-  if (!parsed.success) throw new Error("Ungültige Nachricht.");
+  if (!parsed.success) redirect("/dashboard/tickets?error=message");
+
   const ticket = await prisma.ticket.findUnique({ where: { id: parsed.data.ticketId } });
-  if (!ticket || (ticket.userId !== user.id && user.role === "PLAYER")) {
-    throw new Error("Kein Zugriff auf dieses Ticket.");
-  }
+  if (!ticket) redirect("/dashboard/tickets");
+  const authorization = await getAuthorizationContext(user.id);
+  const staffCanReply = canAccessTicketCategory(
+    authorization,
+    ticket.categoryId,
+    "canReply",
+  );
+  if (ticket.userId !== user.id && !staffCanReply) redirect("/dashboard");
+
   await prisma.$transaction([
     prisma.ticketMessage.create({
       data: {
@@ -104,36 +99,13 @@ export async function replyTicketAction(formData: FormData) {
     prisma.ticket.update({
       where: { id: ticket.id },
       data: {
-        status: ticket.status === "WAITING_USER" ? "IN_PROGRESS" : ticket.status,
+        status:
+          ticket.userId === user.id && ticket.status === "WAITING_USER"
+            ? "IN_PROGRESS"
+            : ticket.status,
       },
     }),
   ]);
   revalidatePath("/dashboard/tickets/" + ticket.id);
-}
-
-export async function submitApplicationAction(formData: FormData) {
-  const user = await ensureDbUser();
-  const parsed = applicationSchema.safeParse({
-    motivation: formValue(formData, "motivation"),
-    experience: formValue(formData, "experience"),
-    scenario: formValue(formData, "scenario"),
-  });
-  if (!parsed.success) redirect("/dashboard/bewerbung?error=invalid");
-  const openApplication = await prisma.application.findFirst({
-    where: {
-      userId: user.id,
-      status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
-    },
-  });
-  if (openApplication) redirect("/dashboard/bewerbung?error=existing");
-  await prisma.application.create({
-    data: {
-      userId: user.id,
-      type: "WHITELIST",
-      status: "SUBMITTED",
-      answers: parsed.data as Prisma.InputJsonValue,
-      submittedAt: new Date(),
-    },
-  });
-  redirect("/dashboard/bewerbung?submitted=1");
+  revalidatePath("/staff/tickets");
 }

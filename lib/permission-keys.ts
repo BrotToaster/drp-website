@@ -1,0 +1,37 @@
+export const permissionDefinitions = [
+  { key: "staff.access", label: "Staff-Panel öffnen", group: "Zugang" },
+  { key: "admin.access", label: "Admin-Panel öffnen", group: "Zugang" },
+  { key: "tickets.view", label: "Tickets anzeigen", group: "Tickets" },
+  { key: "tickets.reply", label: "Auf Tickets antworten", group: "Tickets" },
+  { key: "tickets.assign", label: "Tickets zuweisen", group: "Tickets" },
+  { key: "tickets.status", label: "Ticketstatus ändern", group: "Tickets" },
+  { key: "users.view", label: "Nutzer anzeigen", group: "Nutzer" },
+  { key: "users.roles.assign", label: "Nutzerrollen zuweisen", group: "Nutzer" },
+  { key: "rules.view", label: "Regelverwaltung anzeigen", group: "Regelwerk" },
+  { key: "rules.create", label: "Regeln erstellen", group: "Regelwerk" },
+  { key: "rules.edit", label: "Regeln bearbeiten", group: "Regelwerk" },
+  { key: "rules.delete", label: "Regeln löschen", group: "Regelwerk" },
+  { key: "rules.publish", label: "Regeln veröffentlichen", group: "Regelwerk" },
+  { key: "news.view", label: "Newsverwaltung anzeigen", group: "News" },
+  { key: "news.create", label: "News erstellen", group: "News" },
+  { key: "news.edit", label: "News bearbeiten", group: "News" },
+  { key: "news.delete", label: "News löschen", group: "News" },
+  { key: "news.publish", label: "News veröffentlichen", group: "News" },
+  { key: "audit.view", label: "Audit-Log anzeigen", group: "Kontrolle" },
+  { key: "roles.manage", label: "Rollen und Rechte verwalten", group: "Administration" },
+  { key: "discord.manage", label: "Discord-Zuordnungen verwalten", group: "Administration" },
+  { key: "tickets.manage_categories", label: "Ticketkategorien verwalten", group: "Administration" },
+  { key: "site.manage", label: "Website-Inhalte verwalten", group: "Administration" },
+  { key: "integrations.view", label: "Integrationen anzeigen", group: "Administration" },
+] as const;
+
+export type PermissionKey = (typeof permissionDefinitions)[number]["key"];
+
+export const allPermissionKeys = permissionDefinitions.map((permission) => permission.key);
+
+export const staffNavigationPermissions = {
+  tickets: "tickets.view",
+  rules: "rules.view",
+  news: "news.view",
+  audit: "audit.view",
+} as const satisfies Record<string, PermissionKey>;

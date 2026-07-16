@@ -158,3 +158,16 @@ npm run db:setup
 ```
 
 Anschließend ist die Website unter `http://localhost:3000` erreichbar. Die lokale PostgreSQL-Datenbank läuft ohne Docker und wird beendet, sobald `npm run dev:netlify` beendet wird.
+
+## Zusätzliche Variablen für Portal v2
+
+In Netlify unter **Site configuration → Environment variables** ergänzen:
+
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+- optional DISCORD_GUILD_ID
+
+Nach dem Deploy zuerst die Migrationen anwenden. Danach sendet der Bot einmal POST /api/bot/discord/roles, die Discord-Zuordnungen werden im Admin-Panel aktiviert und anschließend folgt der vollständige Mitgliederabgleich über POST /api/bot/discord/members.
+
+Für den Mitgliederabgleich muss beim Discord-Bot der privilegierte GUILD_MEMBERS-Intent aktiviert sein.

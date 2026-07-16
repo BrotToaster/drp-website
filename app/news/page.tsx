@@ -11,13 +11,15 @@ export default async function NewsPage() {
   const news = await getPublishedNews();
   return (
     <>
-      <PageIntro eyebrow="DRP Journal" title="Was Liberty County bewegt." copy="Updates, Community-Neuigkeiten und Einblicke aus unserem Serveralltag." />
+      <PageIntro eyebrow="DRP Journal" title="Was neu bei DRP ist." copy="Updates, Community-Neuigkeiten und Einblicke aus unserem Serveralltag." />
       <section className="section-space">
         <div className="container-shell grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {news.map((post, index) => (
             <Link key={post.id} href={"/news/" + post.slug} className="surface surface-interactive overflow-hidden">
-              <div className={"flex h-44 items-end border-b border-white/[0.07] p-6 " + (index === 0 ? "bg-[#d6aa4c]/10 md:col-span-1" : "bg-white/[0.02]")}>
-                <span className="badge badge-gold">{post.coverLabel || "News"}</span>
+              <div className={"relative flex h-44 items-end overflow-hidden border-b border-white/[0.07] p-6 " + (index === 0 ? "bg-[#d6aa4c]/10 md:col-span-1" : "bg-white/[0.02]")}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {post.thumbnailUrl && <img src={post.thumbnailUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-45" />}
+                <span className="badge badge-gold relative">{post.coverLabel || "News"}</span>
               </div>
               <div className="p-6">
                 <time className="text-xs text-[#73797d]">{formatDate(post.publishedAt)}</time>

@@ -1,69 +1,120 @@
-# DRP – ER:LC Serverportal
+# DRP – Deutschland Roleplay Portal
 
-Minimalistisches Serverportal mit öffentlicher Website, Spieler-Dashboard, Staff-Panel, Discord-/Roblox-Anmeldung, Tickets, Bewerbungen, Sanktionen und einer geschützten Bot-Datenschnittstelle.
+Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und News, Discord-/Roblox-OAuth, Spieler-Dashboard, Tickets sowie rollenbasiertem Staff- und Admin-Panel.
 
 ## Technik
 
-- Next.js App Router und TypeScript
+- Next.js 15 App Router, TypeScript und Tailwind CSS
 - Auth.js mit Discord und Roblox OAuth
-- Prisma ORM mit PostgreSQL
-- Netlify für Website, Server Actions, API-Routen und Deployments
-- Netlify Database für die gemeinsame PostgreSQL-Datenbank
+- PostgreSQL über Netlify Database und Prisma 6
+- TipTap-JSON für versionierte Regeln und News
+- signierte Cloudinary-Direktuploads
+- kombinierbare Datenbankrollen mit Discord-Synchronisierung
 
-## Auf Netlify veröffentlichen
+## Lokal starten
 
-Die vollständige Schritt-für-Schritt-Anleitung steht in [DEPLOY_NETLIFY.md](./DEPLOY_NETLIFY.md).
+~~~powershell
+npm install
+Copy-Item .env.example .env
+npx netlify login
+npx netlify link
+npm run dev:netlify
+~~~
 
-Die wichtigsten Vorbereitungen sind bereits enthalten:
+In einem zweiten Terminal werden die Migrationen einmalig angewendet:
 
-- `netlify.toml` mit Build- und lokaler Dev-Konfiguration
-- automatische PostgreSQL-Migrationen unter `netlify/database/migrations`
-- automatische Startdaten für Regelwerk, News, Team und Bot-Status
-- Prisma-Anbindung an `NETLIFY_DB_URL`
-- `.env.example` mit allen benötigten Variablen
+~~~powershell
+npm run db:setup
+npm run db:seed
+~~~
 
-## Lokal mit Netlify entwickeln
+Danach ist die Website unter http://localhost:3000 erreichbar. Docker wird nicht benötigt. npm run dev funktioniert nur, wenn DATABASE_URL auf eine erreichbare PostgreSQL-Datenbank zeigt.
 
-Nach dem ersten Netlify-Deployment und `netlify link`:
+## Netlify
 
-1. In Terminal 1: `npm run dev:netlify`
-2. Beim ersten Start in Terminal 2: `npm run db:setup`
-3. Im Browser `http://localhost:3000` öffnen
+Die ausführliche Anleitung steht in [DEPLOY_NETLIFY.md](./DEPLOY_NETLIFY.md). Vor dem ersten Produktionsdeploy müssen alle Werte aus .env.example als Netlify Environment Variables hinterlegt werden. Geheimnisse gehören niemals in Git.
 
-Netlify startet dabei eine lokale PostgreSQL-Datenbank. Docker wird nicht benötigt. Der reine Befehl `npm run dev` ist nur sinnvoll, wenn `DATABASE_URL` auf eine erreichbare PostgreSQL-Datenbank zeigt.
+Migrationen liegen unter netlify/database/migrations. Die Portal-v2-Migration:
 
-## Discord-Bot anbinden
+- überführt bestehende feste Rollen in kombinierbare Rollen,
+- führt TECHNICAL und CONTACT als Ticketkategorien ein,
+- entfernt Bewerbungen und Sanktionen,
+- erstellt versionierte Regeln/News und Medien,
+- importiert 60 Regeln aus dem bestehenden DRP-Regelwerk.
 
-Der selbst gehostete Bot muss keine Datenbank-Zugangsdaten erhalten. Er sendet den Header:
+## Discord-Bot
 
-```text
+Alle Bot-Endpunkte erwarten:
+
+~~~text
 Authorization: Bearer <BOT_INGEST_TOKEN>
-```
+Content-Type: application/json
+~~~
 
-Endpunkte:
+Vorhandene generische Endpunkte:
 
-- `POST /api/bot/data` für aktuelle, überschreibbare Werte
-- `GET /api/bot/data` zum geschützten Auslesen
-- `POST /api/bot/events` für chronologische Ereignisse
+- POST /api/bot/data – aktuelle Werte
+- POST /api/bot/events – chronologische Ereignisse
 
-Beispiel für `/api/bot/data`:
+Neue Rollensynchronisierung:
 
-```json
+- POST /api/bot/discord/roles
+- POST /api/bot/discord/members
+
+Beispiel für Rollen:
+
+~~~json
 {
-  "namespace": "public",
-  "key": "discord",
-  "discordGuildId": "123456789",
-  "data": { "members": 250, "online": 74, "inviteCode": "drpg" }
+  "guildId": "123456789",
+  "externalId": "roles-sync-2026-07-17T12:00:00Z",
+  "roles": [
+    {
+      "id": "987654321",
+      "name": "Supporter",
+      "color": "#57c98c",
+      "position": 20,
+      "managed": false
+    }
+  ]
 }
-```
+~~~
 
-Die Website speichert diese Werte serverseitig in Netlify Database. Der Datenbank-Connection-String bleibt geheim.
+Beispiel für Mitglieder:
 
-## Qualitätsprüfung
+~~~json
+{
+  "guildId": "123456789",
+  "externalId": "members-sync-2026-07-17T12:00:00Z-1",
+  "members": [
+    {
+      "id": "111222333",
+      "username": "beispiel",
+      "displayName": "Beispiel",
+      "avatarUrl": null,
+      "roleIds": ["987654321"]
+    }
+  ]
+}
+~~~
 
-```powershell
+externalId macht Wiederholungen idempotent. Der Bot sollte auf Guild Member Update reagieren und zusätzlich regelmäßig einen Vollabgleich senden. Dafür muss im Discord Developer Portal der privilegierte GUILD_MEMBERS-Intent aktiviert sein.
+
+## Regelwerk-Fixture
+
+Das importierte Regelwerk liegt in data/rules.fixture.json. Neu erzeugen:
+
+~~~powershell
+node scripts/import-rule-source.mjs
+node scripts/generate-rule-migration.mjs
+~~~
+
+Die Fixture enthält eine SHA-256-Prüfsumme, die durch Tests abgesichert wird.
+
+## Qualität
+
+~~~powershell
 npm run lint
 npm run typecheck
 npm test
 npm run build
-```
+~~~
