@@ -103,15 +103,15 @@ export async function getPublicTeam(): Promise<TeamView[]> {
     const profiles = await prisma.staffProfile.findMany({
       where: { visible: true },
       orderBy: { displayOrder: "asc" },
-      include: { user: { select: { id: true, name: true, avatar: true } } },
+      include: { user: { select: { id: true, name: true, avatar: true } }, image: { select: { secureUrl: true } } },
     });
     return profiles.map((profile) => ({
       id: profile.id,
-      name: profile.user.name,
+      name: profile.displayName || profile.user?.name || "DRP Team",
       title: profile.title,
       department: profile.department,
       bio: profile.bio,
-      avatar: profile.user.avatar,
+      avatar: profile.image?.secureUrl || profile.user?.avatar || null,
     }));
   } catch {
     return demoTeam;

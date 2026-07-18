@@ -18,7 +18,7 @@ export default async function TicketAdminPage() {
   ]);
 
   return (
-    <PortalShell authorization={authorization} title="Ticketkategorien & Zugriffe" description="Anzeigen, Antworten, Zuweisen und Statusänderungen werden je Rolle und Kategorie getrennt gesteuert." section="admin">
+    <PortalShell authorization={authorization} title="Ticketkategorien & Zugriffe" description="Anzeigen, Antworten, Zuweisen, Statusänderungen und Löschung werden je Rolle und Kategorie getrennt gesteuert." section="admin">
       <div className="grid gap-4">
         {categories.map((category) => (
           <section className="surface p-6" key={category.id}>
@@ -43,6 +43,7 @@ export default async function TicketAdminPage() {
                       <label><input type="checkbox" name="canReply" defaultChecked={access?.canReply} /> Antworten</label>
                       <label><input type="checkbox" name="canAssign" defaultChecked={access?.canAssign} /> Zuweisen</label>
                       <label><input type="checkbox" name="canStatus" defaultChecked={access?.canStatus} /> Status ändern</label>
+                      <label><input type="checkbox" name="canDelete" defaultChecked={access?.canDelete} /> Geschlossene löschen</label>
                     </div>
                     <SubmitButton variant="secondary">Zugriff speichern</SubmitButton>
                   </form>

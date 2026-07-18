@@ -14,8 +14,11 @@ export default async function TeamPage() {
         <div className="container-shell grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {team.map((member) => (
             <article key={member.id} className="surface p-7">
-              <div className="grid h-16 w-16 place-items-center rounded-2xl border border-[#d6aa4c]/20 bg-[#d6aa4c]/10 text-xl font-bold text-[#efc76e]">
-                {member.name.slice(0, 2).toUpperCase()}
+              <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl border border-[#d6aa4c]/20 bg-[#d6aa4c]/10 text-xl font-bold text-[#efc76e]">
+                {member.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                ) : member.name.slice(0, 2).toUpperCase()}
               </div>
               <span className="mt-8 block text-[10px] font-bold uppercase tracking-[0.15em] text-[#efc76e]">{member.department}</span>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight">{member.name}</h2>
@@ -23,6 +26,7 @@ export default async function TeamPage() {
               <p className="mt-5 text-sm leading-7 text-[#858b90]">{member.bio}</p>
             </article>
           ))}
+          {!team.length && <p className="surface p-8 text-sm text-[#777d81]">Aktuell sind keine Teamprofile veröffentlicht.</p>}
         </div>
       </section>
     </>

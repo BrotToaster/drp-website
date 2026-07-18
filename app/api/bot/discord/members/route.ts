@@ -46,6 +46,8 @@ export async function POST(request: Request) {
           data: {
             discordUsername: member.username,
             discordDisplayName: member.displayName || member.username,
+            discordAvatarUrl: member.avatarUrl || user.discordAvatarUrl,
+            discordSyncedAt: new Date(),
             avatar: member.avatarUrl || user.avatar,
           },
         });

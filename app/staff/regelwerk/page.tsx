@@ -79,6 +79,7 @@ export default async function StaffRulesPage({
             url: item.media.secureUrl,
             kind: item.media.kind,
             name: item.media.originalName,
+      caption: item.caption,
           })) || [];
           return (
             <details key={rule.id} className="surface p-6">

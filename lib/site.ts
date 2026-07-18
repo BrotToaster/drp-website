@@ -9,9 +9,11 @@ export const siteConfig = {
   navigation: [
     { href: "/", label: "Start" },
     { href: "/server", label: "Server" },
+    { href: "/status", label: "Status" },
     { href: "/regelwerk", label: "Regelwerk" },
     { href: "/news", label: "News" },
     { href: "/team", label: "Team" },
+    { href: "/faq", label: "FAQ" },
   ],
 } as const;
 

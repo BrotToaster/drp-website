@@ -5,6 +5,7 @@ export const permissionDefinitions = [
   { key: "tickets.reply", label: "Auf Tickets antworten", group: "Tickets" },
   { key: "tickets.assign", label: "Tickets zuweisen", group: "Tickets" },
   { key: "tickets.status", label: "Ticketstatus ändern", group: "Tickets" },
+  { key: "tickets.delete", label: "Geschlossene Tickets löschen", group: "Tickets" },
   { key: "users.view", label: "Nutzer anzeigen", group: "Nutzer" },
   { key: "users.roles.assign", label: "Nutzerrollen zuweisen", group: "Nutzer" },
   { key: "rules.view", label: "Regelverwaltung anzeigen", group: "Regelwerk" },
@@ -17,11 +18,16 @@ export const permissionDefinitions = [
   { key: "news.edit", label: "News bearbeiten", group: "News" },
   { key: "news.delete", label: "News löschen", group: "News" },
   { key: "news.publish", label: "News veröffentlichen", group: "News" },
+  { key: "faq.view", label: "FAQ-Verwaltung anzeigen", group: "FAQ" },
+  { key: "faq.manage", label: "FAQ verwalten", group: "FAQ" },
   { key: "audit.view", label: "Audit-Log anzeigen", group: "Kontrolle" },
   { key: "roles.manage", label: "Rollen und Rechte verwalten", group: "Administration" },
   { key: "discord.manage", label: "Discord-Zuordnungen verwalten", group: "Administration" },
   { key: "tickets.manage_categories", label: "Ticketkategorien verwalten", group: "Administration" },
   { key: "site.manage", label: "Website-Inhalte verwalten", group: "Administration" },
+  { key: "team.manage", label: "Teamseite verwalten", group: "Administration" },
+  { key: "status.manage", label: "Statusseite verwalten", group: "Administration" },
+  { key: "legal.manage", label: "Rechtliche Inhalte verwalten", group: "Administration" },
   { key: "integrations.view", label: "Integrationen anzeigen", group: "Administration" },
 ] as const;
 
@@ -30,8 +36,11 @@ export type PermissionKey = (typeof permissionDefinitions)[number]["key"];
 export const allPermissionKeys = permissionDefinitions.map((permission) => permission.key);
 
 export const staffNavigationPermissions = {
+  users: "users.view",
+  roles: "users.roles.assign",
   tickets: "tickets.view",
   rules: "rules.view",
   news: "news.view",
+  faq: "faq.view",
   audit: "audit.view",
 } as const satisfies Record<string, PermissionKey>;

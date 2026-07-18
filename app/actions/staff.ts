@@ -35,6 +35,19 @@ function mediaIds(formData: FormData) {
   }
 }
 
+function mediaCaptionMap(formData: FormData): Record<string, string> {
+  try {
+    const parsed = JSON.parse(value(formData, "mediaCaptions") || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>)
+        .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        .map(([id, caption]) => [id, caption.trim().slice(0, 240)]),
+    );
+  } catch {
+    return {};
+  }
+}
 function auditData(
   actorId: string,
   action: string,
@@ -125,16 +138,16 @@ export async function setManualRolesAction(formData: FormData) {
   const userId = value(formData, "userId");
   const requested = formData.getAll("roleIds").map(String);
   const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target) redirect("/staff?error=user");
+  if (!target) redirect("/staff/rollen?error=user");
   const protectedOwner =
     target.id === "demo-owner" ||
     Boolean(target.discordId && target.discordId === process.env.OWNER_DISCORD_ID);
-  if (protectedOwner) redirect("/staff?error=owner");
+  if (protectedOwner) redirect("/staff/rollen?error=owner");
 
   const roles = await prisma.accessRole.findMany({
     where: { id: { in: requested }, key: { not: "OWNER" } },
   });
-  if (roles.length !== requested.length) redirect("/staff?error=role");
+  if (roles.length !== requested.length) redirect("/staff/rollen?error=role");
 
   await prisma.$transaction(async (tx) => {
     await tx.userRoleAssignment.deleteMany({
@@ -158,8 +171,49 @@ export async function setManualRolesAction(formData: FormData) {
       }),
     });
   });
+  revalidatePath("/staff/rollen");
+  revalidatePath("/staff/nutzer");
+  redirect("/staff/rollen?saved=roles");
+}
+
+
+export async function deleteClosedTicketAction(formData: FormData) {
+  const { user: actor, authorization } = await requirePermission("tickets.delete");
+  const ticketId = value(formData, "ticketId");
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
+      number: true,
+      categoryId: true,
+      userId: true,
+      subject: true,
+      status: true,
+    },
+  });
+  if (!ticket) redirect("/staff/tickets?error=missing");
+  if (ticket.status !== "CLOSED") redirect("/staff/tickets?error=not-closed");
+  if (!canAccessTicketCategory(authorization, ticket.categoryId, "canDelete")) {
+    redirect("/staff/tickets?error=forbidden");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.create({
+      data: auditData(actor.id, "TICKET_DELETED", "Ticket", ticket.id, {
+        number: ticket.number,
+        categoryId: ticket.categoryId,
+        affectedUserId: ticket.userId,
+        subject: ticket.subject,
+      }),
+    });
+    await tx.ticket.delete({ where: { id: ticket.id } });
+  });
+
   revalidatePath("/staff");
-  redirect("/staff?saved=roles");
+  revalidatePath("/staff/tickets");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tickets");
+  redirect("/staff/tickets?deleted=1");
 }
 
 export async function saveRuleAction(formData: FormData) {
@@ -213,6 +267,7 @@ export async function saveRuleAction(formData: FormData) {
           create: parsed.data.mediaIds.map((mediaId, index) => ({
             mediaId,
             sortOrder: index,
+            caption: mediaCaptionMap(formData)[mediaId] || null,
           })),
         },
       },
@@ -343,6 +398,7 @@ export async function saveNewsAction(formData: FormData) {
           create: parsed.data.mediaIds.map((mediaId, index) => ({
             mediaId,
             sortOrder: index,
+            caption: mediaCaptionMap(formData)[mediaId] || null,
           })),
         },
       },

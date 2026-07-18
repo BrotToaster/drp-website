@@ -119,6 +119,7 @@ export async function saveTicketAccessAction(formData: FormData) {
     canReply: formData.get("canReply") === "on",
     canAssign: formData.get("canAssign") === "on",
     canStatus: formData.get("canStatus") === "on",
+    canDelete: formData.get("canDelete") === "on",
   };
   await prisma.$transaction(async (tx) => {
     await tx.roleTicketCategoryAccess.upsert({

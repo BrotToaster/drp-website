@@ -18,6 +18,7 @@ const context: AuthorizationContext = {
       canReply: false,
       canAssign: false,
       canStatus: false,
+      canDelete: false,
     },
     {
       categoryId: "contact",
@@ -25,6 +26,7 @@ const context: AuthorizationContext = {
       canReply: true,
       canAssign: false,
       canStatus: false,
+      canDelete: true,
     },
   ],
   isOwner: false,
@@ -44,6 +46,7 @@ describe("Kombinierbare Rechte und Ticketstatus", () => {
   it("wertet kategoriebasierte Rechte aus", () => {
     expect(canAccessTicketCategory(context, "contact", "canView")).toBe(true);
     expect(canAccessTicketCategory(context, "contact", "canReply")).toBe(true);
+    expect(canAccessTicketCategory(context, "contact", "canDelete")).toBe(true);
     expect(canAccessTicketCategory(context, "technical", "canView")).toBe(false);
   });
 

@@ -7,6 +7,7 @@ export type TicketAccess = {
   canReply: boolean;
   canAssign: boolean;
   canStatus: boolean;
+  canDelete: boolean;
 };
 
 export type AuthorizationContext = {
@@ -28,7 +29,7 @@ export function hasPermission(
 export function canAccessTicketCategory(
   context: AuthorizationContext,
   categoryId: string,
-  ability: "canView" | "canReply" | "canAssign" | "canStatus",
+  ability: "canView" | "canReply" | "canAssign" | "canStatus" | "canDelete",
 ) {
   if (context.isOwner) return true;
   return context.ticketAccess.some(

@@ -21,13 +21,13 @@ export async function ensureDbUser() {
     where: { id: sessionUser.id },
     update: {
       name: sessionUser.name || "DRP Mitglied",
-      email: sessionUser.email,
+      email: null,
       avatar: sessionUser.image,
     },
     create: {
       id: sessionUser.id,
       name: sessionUser.name || "DRP Mitglied",
-      email: sessionUser.email,
+      email: null,
       avatar: sessionUser.image,
       registrationCompleted:
         sessionUser.registrationCompleted || sessionUser.id === "demo-owner",
@@ -83,6 +83,7 @@ export async function getAuthorizationContext(userId: string): Promise<Authoriza
         canReply: Boolean(current?.canReply || access.canReply),
         canAssign: Boolean(current?.canAssign || access.canAssign),
         canStatus: Boolean(current?.canStatus || access.canStatus),
+        canDelete: Boolean(current?.canDelete || access.canDelete),
       });
     }
   }

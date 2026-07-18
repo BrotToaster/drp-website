@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/status-pill";
+import { NewsCard } from "@/components/news-card";
 import { RuleRotator } from "@/components/rule-rotator";
 import { ArrowLink, SectionHeading } from "@/components/ui";
 import { getPublishedNews, getPublishedRules } from "@/lib/data";
 import { getPublicServerStatus } from "@/lib/erlc";
-import { formatDate } from "@/lib/site";
 import { getHomepageSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
@@ -135,19 +135,7 @@ export default async function HomePage() {
             <ArrowLink href="/news">Alle Neuigkeiten</ArrowLink>
           </div>
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
-            {news.slice(0, 3).map((post, index) => (
-              <Link key={post.id} href={"/news/" + post.slug} className="surface surface-interactive overflow-hidden">
-                <div className={"h-40 border-b border-white/[0.07] p-5 " + (index === 0 ? "bg-[#d6aa4c]/10" : "bg-white/[0.02]")}>
-                  <span className="badge badge-gold">{post.coverLabel || "News"}</span>
-                  <div className="mt-14 text-[10px] font-bold uppercase tracking-[0.16em] text-[#737a7e]">DRP Journal</div>
-                </div>
-                <div className="p-6">
-                  <time className="text-xs text-[#73797d]">{formatDate(post.publishedAt)}</time>
-                  <h3 className="mt-3 text-xl font-semibold tracking-[-0.025em]">{post.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#90969a]">{post.excerpt}</p>
-                </div>
-              </Link>
-            ))}
+            {news.slice(0, 3).map((post) => <NewsCard key={post.id} post={post} />)}
           </div>
         </div>
       </section>

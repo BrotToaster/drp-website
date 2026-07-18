@@ -5,7 +5,7 @@ import { siteConfig } from "@/lib/site";
 import { getHomepageSettings } from "@/lib/site-settings";
 
 const navClass =
-  "rounded-full border border-transparent px-4 py-2 text-[13px] font-semibold text-[#aeb2b5] transition hover:bg-white/[0.04] hover:text-white";
+  "rounded-full border border-transparent px-3 py-2 text-[12px] xl:px-4 xl:text-[13px] font-semibold text-[#aeb2b5] transition hover:bg-white/[0.04] hover:text-white";
 const activeClass =
   "!border-[#d6aa4c]/25 !bg-[#d6aa4c]/10 !text-[#efc76e]";
 

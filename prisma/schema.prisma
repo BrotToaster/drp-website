@@ -33,16 +33,36 @@ enum TicketStatus {
   CLOSED
 }
 
+enum StatusSource {
+  ERLC
+  DISCORD
+  ROBLOX
+  MANUAL
+}
+
+enum ServiceStatus {
+  OPERATIONAL
+  DEGRADED
+  PARTIAL_OUTAGE
+  MAJOR_OUTAGE
+  MAINTENANCE
+  UNKNOWN
+}
+
 model User {
   id                     String               @id @default(cuid())
   discordId              String?              @unique
   discordUsername        String?
   discordDisplayName     String?
+  discordAvatarUrl       String?
+  discordSyncedAt        DateTime?
   email                  String?              @unique
   name                   String
   avatar                 String?
   robloxName             String?
   robloxDisplayName      String?
+  robloxAvatarUrl        String?
+  robloxSyncedAt         DateTime?
   robloxUserId           String?              @unique
   registrationCompleted  Boolean              @default(false)
   createdAt              DateTime             @default(now())
@@ -60,6 +80,8 @@ model User {
   ruleRevisions          RuleRevision[]       @relation("RuleRevisionEditor")
   newsRevisions          NewsRevision[]       @relation("NewsRevisionEditor")
   uploadedMedia          MediaAsset[]         @relation("MediaUploader")
+  editedFaqItems         FaqItem[]             @relation("FaqItemEditor")
+  statusUpdates          StatusUpdate[]        @relation("StatusUpdateAuthor")
 }
 
 model AuthAccount {
@@ -78,14 +100,19 @@ model AuthAccount {
 }
 
 model StaffProfile {
-  id           String  @id @default(cuid())
-  userId       String  @unique
+  id           String      @id @default(cuid())
+  userId       String?     @unique
+  displayName  String
   title        String
   department   String
   bio          String?
-  displayOrder Int     @default(0)
-  visible      Boolean @default(true)
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageId      String?
+  displayOrder Int         @default(0)
+  visible      Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  image        MediaAsset? @relation("TeamProfileImage", fields: [imageId], references: [id], onDelete: SetNull)
 }
 
 model AccessRole {
@@ -203,6 +230,7 @@ model RoleTicketCategoryAccess {
   canReply   Boolean        @default(false)
   canAssign  Boolean        @default(false)
   canStatus  Boolean        @default(false)
+  canDelete  Boolean        @default(false)
   role       AccessRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
   category   TicketCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -331,6 +359,7 @@ model MediaAsset {
   ruleRevisions  RuleRevisionMedia[]
   newsRevisions  NewsRevisionMedia[]
   newsThumbnails NewsPost[]          @relation("NewsThumbnail")
+  teamImages     StaffProfile[]       @relation("TeamProfileImage")
 }
 
 model Ticket {
@@ -342,6 +371,8 @@ model Ticket {
   status     TicketStatus    @default(OPEN)
   userId     String
   assigneeId String?
+  ownerArchivedAt DateTime?
+  ownerHiddenAt   DateTime?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   category   TicketCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -350,6 +381,7 @@ model Ticket {
   messages   TicketMessage[]
 
   @@index([categoryId, status, updatedAt])
+  @@index([userId, ownerHiddenAt, ownerArchivedAt])
 }
 
 model TicketMessage {
@@ -384,6 +416,54 @@ model SiteSetting {
   key       String   @unique
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+model FaqItem {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  visible     Boolean  @default(true)
+  editorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  editor      User?    @relation("FaqItemEditor", fields: [editorId], references: [id], onDelete: SetNull)
+
+  @@index([visible, sortOrder])
+}
+
+model StatusService {
+  id            String        @id @default(cuid())
+  key           String        @unique
+  name          String
+  description   String?
+  source        StatusSource
+  enabled       Boolean       @default(true)
+  sortOrder     Int           @default(0)
+  manualStatus  ServiceStatus @default(OPERATIONAL)
+  lastStatus    ServiceStatus @default(UNKNOWN)
+  lastMessage   String?
+  lastCheckedAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  updates       StatusUpdate[]
+
+  @@index([enabled, sortOrder])
+}
+
+model StatusUpdate {
+  id        String        @id @default(cuid())
+  serviceId String
+  status    ServiceStatus
+  message   String?
+  public    Boolean       @default(true)
+  authorId  String?
+  createdAt DateTime      @default(now())
+  service   StatusService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  author    User?         @relation("StatusUpdateAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([serviceId, createdAt])
+  @@index([public, createdAt])
 }
 
 model BotRecord {

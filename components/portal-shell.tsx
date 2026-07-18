@@ -13,9 +13,12 @@ const playerLinks = [
 
 const staffLinks = [
   { href: "/staff", label: "Übersicht", permission: "staff.access", exact: true },
+  { href: "/staff/nutzer", label: "Nutzer", permission: staffNavigationPermissions.users },
+  { href: "/staff/rollen", label: "Rollenvergabe", permission: staffNavigationPermissions.roles },
   { href: "/staff/tickets", label: "Ticketverwaltung", permission: staffNavigationPermissions.tickets },
   { href: "/staff/regelwerk", label: "Regelwerk", permission: staffNavigationPermissions.rules },
   { href: "/staff/news", label: "News", permission: staffNavigationPermissions.news },
+  { href: "/staff/faq", label: "FAQ", permission: staffNavigationPermissions.faq },
   { href: "/staff/audit", label: "Audit-Log", permission: staffNavigationPermissions.audit },
 ] as const;
 
@@ -25,6 +28,9 @@ const adminLinks = [
   { href: "/admin/discord", label: "Discord", permission: "discord.manage" },
   { href: "/admin/tickets", label: "Ticketzugriffe", permission: "tickets.manage_categories" },
   { href: "/admin/website", label: "Website", permission: "site.manage" },
+  { href: "/admin/team", label: "Team", permission: "team.manage" },
+  { href: "/admin/status", label: "Status", permission: "status.manage" },
+  { href: "/admin/rechtliches", label: "Rechtliches", permission: "legal.manage" },
   { href: "/admin/integrationen", label: "Integrationen", permission: "integrations.view" },
 ] as const;
 

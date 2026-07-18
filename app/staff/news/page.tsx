@@ -47,6 +47,7 @@ export default async function StaffNewsPage({
       url: item.media.secureUrl,
       kind: item.media.kind,
       name: item.media.originalName,
+      caption: item.caption,
     })) || [];
     const thumbnail = post?.thumbnail
       ? [{ id: post.thumbnail.id, url: post.thumbnail.secureUrl, kind: post.thumbnail.kind, name: post.thumbnail.originalName }]
@@ -61,7 +62,7 @@ export default async function StaffNewsPage({
         <label className="field-label">Kurzbeschreibung<textarea className="field !min-h-24" name="excerpt" defaultValue={post?.excerpt} required minLength={20} maxLength={320} /></label>
         <RichTextEditor initialContent={initial} />
         <div className="grid gap-5 lg:grid-cols-2">
-          <div><p className="mb-2 text-sm font-semibold">Thumbnail</p><MediaUploader inputName="thumbnailId" single initialAssets={thumbnail} /></div>
+          <div><p className="mb-2 text-sm font-semibold">Thumbnail</p><MediaUploader inputName="thumbnailId" single imagesOnly initialAssets={thumbnail} /></div>
           <div><p className="mb-2 text-sm font-semibold">Weitere Medien</p><MediaUploader initialAssets={assets} /></div>
         </div>
         <div className="flex flex-wrap gap-2">

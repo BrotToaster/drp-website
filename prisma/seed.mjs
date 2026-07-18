@@ -15,6 +15,7 @@ const permissionDefinitions = [
   ["tickets.reply", "Auf Tickets antworten", "Tickets"],
   ["tickets.assign", "Tickets zuweisen", "Tickets"],
   ["tickets.status", "Ticketstatus ändern", "Tickets"],
+  ["tickets.delete", "Geschlossene Tickets löschen", "Tickets"],
   ["users.view", "Nutzer anzeigen", "Nutzer"],
   ["users.roles.assign", "Nutzerrollen zuweisen", "Nutzer"],
   ["rules.view", "Regelverwaltung anzeigen", "Regelwerk"],
@@ -27,11 +28,16 @@ const permissionDefinitions = [
   ["news.edit", "News bearbeiten", "News"],
   ["news.delete", "News löschen", "News"],
   ["news.publish", "News veröffentlichen", "News"],
+  ["faq.view", "FAQ-Verwaltung anzeigen", "FAQ"],
+  ["faq.manage", "FAQ verwalten", "FAQ"],
   ["audit.view", "Audit-Log anzeigen", "Kontrolle"],
   ["roles.manage", "Rollen und Rechte verwalten", "Administration"],
   ["discord.manage", "Discord-Zuordnungen verwalten", "Administration"],
   ["tickets.manage_categories", "Ticketkategorien verwalten", "Administration"],
   ["site.manage", "Website-Inhalte verwalten", "Administration"],
+  ["team.manage", "Teamseite verwalten", "Administration"],
+  ["status.manage", "Statusseite verwalten", "Administration"],
+  ["legal.manage", "Rechtliche Inhalte verwalten", "Administration"],
   ["integrations.view", "Integrationen anzeigen", "Administration"],
 ];
 
@@ -95,8 +101,8 @@ async function main() {
       const role = roles.get(roleKey);
       await prisma.roleTicketCategoryAccess.upsert({
         where: { roleId_categoryId: { roleId: role.id, categoryId: category.id } },
-        update: { canView: true, canReply: true, canAssign: true, canStatus: true },
-        create: { roleId: role.id, categoryId: category.id, canView: true, canReply: true, canAssign: true, canStatus: true },
+        update: { canView: true, canReply: true, canAssign: true, canStatus: true, canDelete: ["ADMIN", "OWNER"].includes(roleKey) },
+        create: { roleId: role.id, categoryId: category.id, canView: true, canReply: true, canAssign: true, canStatus: true, canDelete: ["ADMIN", "OWNER"].includes(roleKey) },
       });
     }
   }
@@ -152,6 +158,39 @@ async function main() {
       },
     });
   }
+
+  const faqItems = [
+    ["faq-serverzugang", "Wie komme ich auf den Server?", "Tritt unserem Discord bei, verbinde Discord und Roblox und bestätige anschließend das aktuelle Regelwerk im Dashboard.", 10],
+    ["faq-support", "Wie erreiche ich den Support?", "Erstelle im Dashboard ein Ticket als „Technischer Support“ oder „Kontaktaufnahme“. Dort siehst du jederzeit den Bearbeitungsstand.", 20],
+    ["faq-konten", "Warum muss ich Discord und Roblox verbinden?", "Die Verknüpfung ordnet deine Community- und Spielidentität eindeutig zu, ohne dass DRP deine Passwörter erhält.", 30],
+    ["faq-regeln", "Wo sehe ich Regeländerungen?", "Jede Regel zeigt ihre Version und letzte Bearbeitung. Nach einer neuen Veröffentlichung ist eine erneute Bestätigung erforderlich.", 40],
+  ];
+  for (const [id, question, answer, sortOrder] of faqItems) {
+    await prisma.faqItem.upsert({
+      where: { id },
+      update: { question, answer, sortOrder },
+      create: { id, question, answer, sortOrder },
+    });
+  }
+
+  for (const service of [
+    { id: "status-erlc", key: "erlc", name: "ER:LC Server", description: "Status und Spielerzahl des DRP Private Servers", source: "ERLC", sortOrder: 10 },
+    { id: "status-discord", key: "discord", name: "Discord", description: "Offizieller Discord-Plattformstatus", source: "DISCORD", sortOrder: 20 },
+    { id: "status-roblox", key: "roblox", name: "Roblox", description: "Offizieller Roblox-Plattformstatus", source: "ROBLOX", sortOrder: 30 },
+  ]) {
+    await prisma.statusService.upsert({ where: { key: service.key }, update: service, create: service });
+  }
+
+  await prisma.siteSetting.upsert({
+    where: { key: "legal.settings" },
+    update: {},
+    create: { key: "legal.settings", value: { imprintEnabled: true, privacyPublished: false, operatorName: "", addressLine: "", postalCode: "", city: "", country: "Schweiz", contactEmail: "", donations: "NONE", lastReviewedAt: null, noAgeVerificationAcknowledged: true } },
+  });
+  await prisma.siteSetting.upsert({
+    where: { key: "retention.settings" },
+    update: {},
+    create: { key: "retention.settings", value: { closedTicketDays: 365, auditLogDays: 730, discordSnapshotDays: 30 } },
+  });
 
   await prisma.botRecord.upsert({
     where: { namespace_key: { namespace: "public", key: "discord" } },

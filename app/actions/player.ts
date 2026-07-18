@@ -109,3 +109,52 @@ export async function replyTicketAction(formData: FormData) {
   revalidatePath("/dashboard/tickets/" + ticket.id);
   revalidatePath("/staff/tickets");
 }
+export async function archiveTicketAction(formData: FormData) {
+  const user = await ensureDbUser();
+  const ticketId = formValue(formData, "ticketId");
+  const ticket = await prisma.ticket.findFirst({ where: { id: ticketId, userId: user.id } });
+  if (!ticket || !["RESOLVED", "CLOSED"].includes(ticket.status) || ticket.ownerHiddenAt) {
+    redirect("/dashboard/tickets?error=archive");
+  }
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: { ownerArchivedAt: new Date() },
+  });
+  revalidatePath("/dashboard/tickets");
+  revalidatePath("/dashboard/tickets/" + ticket.id);
+  redirect("/dashboard/tickets?view=archive&saved=archived");
+}
+
+export async function restoreTicketAction(formData: FormData) {
+  const user = await ensureDbUser();
+  const ticketId = formValue(formData, "ticketId");
+  const ticket = await prisma.ticket.findFirst({
+    where: { id: ticketId, userId: user.id, ownerArchivedAt: { not: null }, ownerHiddenAt: null },
+  });
+  if (!ticket) redirect("/dashboard/tickets?view=archive&error=restore");
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: { ownerArchivedAt: null },
+  });
+  revalidatePath("/dashboard/tickets");
+  revalidatePath("/dashboard/tickets/" + ticket.id);
+  redirect("/dashboard/tickets?saved=restored");
+}
+
+export async function hideArchivedTicketAction(formData: FormData) {
+  const user = await ensureDbUser();
+  const ticketId = formValue(formData, "ticketId");
+  const ticket = await prisma.ticket.findFirst({
+    where: {
+      id: ticketId,
+      userId: user.id,
+      status: "CLOSED",
+      ownerArchivedAt: { not: null },
+      ownerHiddenAt: null,
+    },
+  });
+  if (!ticket) redirect("/dashboard/tickets?view=archive&error=hide");
+  await prisma.ticket.update({ where: { id: ticket.id }, data: { ownerHiddenAt: new Date() } });
+  revalidatePath("/dashboard/tickets");
+  redirect("/dashboard/tickets?view=archive&saved=hidden");
+}

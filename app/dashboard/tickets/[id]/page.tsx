@@ -1,5 +1,11 @@
 import { notFound } from "next/navigation";
-import { replyTicketAction } from "@/app/actions/player";
+import {
+  archiveTicketAction,
+  hideArchivedTicketAction,
+  replyTicketAction,
+  restoreTicketAction,
+} from "@/app/actions/player";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PortalShell } from "@/components/portal-shell";
 import { StatusBadge } from "@/components/status-badge";
 import { SubmitButton } from "@/components/submit-button";
@@ -41,24 +47,16 @@ export default async function TicketDetailPage({
     },
   });
   if (!ticket) notFound();
-  const staffCanView = canAccessTicketCategory(
-    authorization,
-    ticket.categoryId,
-    "canView",
-  );
+  const staffCanView = canAccessTicketCategory(authorization, ticket.categoryId, "canView");
   if (ticket.userId !== user.id && !staffCanView) notFound();
-  const messages = staffCanView
-    ? ticket.messages
-    : ticket.messages.filter((message) => !message.internal);
+  if (ticket.userId === user.id && ticket.ownerHiddenAt && !staffCanView) notFound();
+
+  const messages = staffCanView ? ticket.messages : ticket.messages.filter((message) => !message.internal);
   const section = ticket.userId !== user.id && staffCanView ? "staff" : "dashboard";
+  const isOwner = ticket.userId === user.id;
 
   return (
-    <PortalShell
-      authorization={authorization}
-      title={"Ticket #" + ticket.number}
-      description={ticket.subject}
-      section={section}
-    >
+    <PortalShell authorization={authorization} title={"Ticket #" + ticket.number} description={ticket.subject} section={section}>
       {query.created && (
         <p role="status" className="mb-5 rounded-xl border border-[#57c98c]/25 bg-[#57c98c]/10 p-4 text-sm text-[#75d7a3]">
           Dein Ticket wurde erfolgreich gesendet.
@@ -74,9 +72,7 @@ export default async function TicketDetailPage({
           </div>
           <div className="grid gap-4 p-5 md:p-6">
             {messages.map((message) => {
-              const staffAuthor = message.author.roleAssignments.some(
-                (assignment) => assignment.role.key !== "PLAYER",
-              );
+              const staffAuthor = message.author.roleAssignments.some((assignment) => assignment.role.key !== "PLAYER");
               return (
                 <article key={message.id} className={"max-w-[85%] rounded-2xl border p-4 " + (staffAuthor ? "border-[#d6aa4c]/20 bg-[#d6aa4c]/[0.06]" : "border-white/[0.07] bg-white/[0.025]")}>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -107,6 +103,29 @@ export default async function TicketDetailPage({
             <div><dt className="text-xs text-[#686e72]">Bearbeitung</dt><dd className="mt-1 font-semibold">{ticket.assignee?.name || "Noch nicht zugewiesen"}</dd></div>
             <div><dt className="text-xs text-[#686e72]">Zuletzt aktualisiert</dt><dd className="mt-1 font-semibold">{formatDateTime(ticket.updatedAt)}</dd></div>
           </dl>
+          {isOwner && !ticket.ownerHiddenAt && ["RESOLVED", "CLOSED"].includes(ticket.status) && (
+            <div className="mt-6 grid gap-2 border-t border-white/[0.07] pt-5">
+              {ticket.ownerArchivedAt ? (
+                <>
+                  <form action={restoreTicketAction}>
+                    <input type="hidden" name="ticketId" value={ticket.id} />
+                    <SubmitButton variant="secondary" pendingText="Wird wiederhergestellt …">Wiederherstellen</SubmitButton>
+                  </form>
+                  {ticket.status === "CLOSED" && (
+                    <form action={hideArchivedTicketAction}>
+                      <input type="hidden" name="ticketId" value={ticket.id} />
+                      <ConfirmSubmitButton message="Ticket aus deiner Ansicht entfernen? Staff behält weiterhin Zugriff.">Aus Ansicht entfernen</ConfirmSubmitButton>
+                    </form>
+                  )}
+                </>
+              ) : (
+                <form action={archiveTicketAction}>
+                  <input type="hidden" name="ticketId" value={ticket.id} />
+                  <SubmitButton variant="secondary" pendingText="Wird archiviert …">Archivieren</SubmitButton>
+                </form>
+              )}
+            </div>
+          )}
         </aside>
       </div>
     </PortalShell>
