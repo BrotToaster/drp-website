@@ -19,7 +19,7 @@ export async function StaffUserDirectory({
 }: {
   query: UserDirectoryQuery;
   editable: boolean;
-  basePath: "/staff/nutzer" | "/staff/rollen";
+  basePath: "/staff/nutzer" | "/staff/rollen" | "/admin/nutzerrollen";
 }) {
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = 20;

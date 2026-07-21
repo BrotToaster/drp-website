@@ -138,16 +138,16 @@ export async function setManualRolesAction(formData: FormData) {
   const userId = value(formData, "userId");
   const requested = formData.getAll("roleIds").map(String);
   const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target) redirect("/staff/rollen?error=user");
+  if (!target) redirect("/admin/nutzerrollen?error=user");
   const protectedOwner =
     target.id === "demo-owner" ||
     Boolean(target.discordId && target.discordId === process.env.OWNER_DISCORD_ID);
-  if (protectedOwner) redirect("/staff/rollen?error=owner");
+  if (protectedOwner) redirect("/admin/nutzerrollen?error=owner");
 
   const roles = await prisma.accessRole.findMany({
     where: { id: { in: requested }, key: { not: "OWNER" } },
   });
-  if (roles.length !== requested.length) redirect("/staff/rollen?error=role");
+  if (roles.length !== requested.length) redirect("/admin/nutzerrollen?error=role");
 
   await prisma.$transaction(async (tx) => {
     await tx.userRoleAssignment.deleteMany({
@@ -171,9 +171,9 @@ export async function setManualRolesAction(formData: FormData) {
       }),
     });
   });
-  revalidatePath("/staff/rollen");
+  revalidatePath("/admin/nutzerrollen");
   revalidatePath("/staff/nutzer");
-  redirect("/staff/rollen?saved=roles");
+  redirect("/admin/nutzerrollen?saved=roles");
 }
 
 

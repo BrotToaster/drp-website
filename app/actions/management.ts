@@ -10,6 +10,7 @@ const text = (formData: FormData, key: string) => String(formData.get(key) || ""
 
 const faqSchema = z.object({
   id: z.string().optional(),
+  category: z.string().min(2).max(80),
   question: z.string().min(5).max(240),
   answer: z.string().min(10).max(4000),
   sortOrder: z.coerce.number().int().min(0).max(10000),
@@ -20,6 +21,7 @@ export async function saveFaqAction(formData: FormData) {
   const { user } = await requirePermission("faq.manage");
   const parsed = faqSchema.safeParse({
     id: text(formData, "id") || undefined,
+    category: text(formData, "category"),
     question: text(formData, "question"),
     answer: text(formData, "answer"),
     sortOrder: text(formData, "sortOrder"),
@@ -34,6 +36,7 @@ export async function saveFaqAction(formData: FormData) {
         })
       : await tx.faqItem.create({
           data: {
+            category: parsed.data.category,
             question: parsed.data.question,
             answer: parsed.data.answer,
             sortOrder: parsed.data.sortOrder,

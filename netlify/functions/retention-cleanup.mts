@@ -18,10 +18,14 @@ export default async function retentionCleanup() {
     const discordSnapshots = await tx.discordMemberSnapshot.deleteMany({
       where: { lastSyncedAt: { lt: beforeDays(retention.discordSnapshotDays) } },
     });
+    const erlcSnapshots = await tx.erlcMetricSnapshot.deleteMany({
+      where: { capturedAt: { lt: beforeDays(30) } },
+    });
     return {
       tickets: tickets.count,
       auditLogs: auditLogs.count,
       discordSnapshots: discordSnapshots.count,
+      erlcSnapshots: erlcSnapshots.count,
     };
   });
   return new Response(JSON.stringify({ ok: true, deleted: result }), {

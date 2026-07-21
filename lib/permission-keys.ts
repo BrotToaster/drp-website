@@ -20,6 +20,10 @@ export const permissionDefinitions = [
   { key: "news.publish", label: "News veröffentlichen", group: "News" },
   { key: "faq.view", label: "FAQ-Verwaltung anzeigen", group: "FAQ" },
   { key: "faq.manage", label: "FAQ verwalten", group: "FAQ" },
+  { key: "staff_faq.view", label: "Internes Staff-FAQ lesen", group: "Wissen" },
+  { key: "staff_faq.manage", label: "Internes Staff-FAQ verwalten", group: "Wissen" },
+  { key: "erlc.check", label: "ER:LC-Status manuell prüfen", group: "Serverbetrieb" },
+  { key: "erlc.details.view", label: "Sensible ER:LC-Details anzeigen", group: "Serverbetrieb" },
   { key: "audit.view", label: "Audit-Log anzeigen", group: "Kontrolle" },
   { key: "roles.manage", label: "Rollen und Rechte verwalten", group: "Administration" },
   { key: "discord.manage", label: "Discord-Zuordnungen verwalten", group: "Administration" },
@@ -42,5 +46,6 @@ export const staffNavigationPermissions = {
   rules: "rules.view",
   news: "news.view",
   faq: "faq.view",
+  staffFaq: "staff_faq.view",
   audit: "audit.view",
 } as const satisfies Record<string, PermissionKey>;

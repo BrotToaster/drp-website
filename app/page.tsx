@@ -99,15 +99,18 @@ export default async function HomePage() {
             title="Wo beginnt deine Geschichte?"
             copy="Wähle deinen Weg, entwickle deinen Charakter und werde Teil eines lebendigen Liberty County."
           />
-          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {homepage.departments.map((department, index) => (
-              <article key={department.code} className="surface surface-interactive group p-7 md:p-8">
-                <div className="flex items-start justify-between">
-                  <span className="badge badge-gold">{department.code}</span>
-                  <span className="text-xs text-[#62686c]">0{index + 1}</span>
+              <article key={department.code + index} className="surface surface-interactive group overflow-hidden">
+                <div className="h-36 border-b border-white/[0.07] bg-[#0b0e11] bg-cover bg-center" style={department.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(9,11,13,.55), transparent), url("${department.imageUrl}")` } : undefined}>
+                  {!department.imageUrl && <div className="grid h-full place-items-center text-4xl font-semibold text-[#d6aa4c]/25">{department.code.slice(0, 2)}</div>}
                 </div>
-                <h3 className="mt-9 text-2xl font-semibold tracking-[-0.03em]">{department.name}</h3>
-                <p className="mt-3 max-w-md text-sm leading-7 text-[#90969a]">{department.copy}</p>
+                <div className="p-7">
+                  <div className="flex items-start justify-between"><span className="badge badge-gold">{department.code}</span><span className="text-xs text-[#62686c]">{String(index + 1).padStart(2, "0")}</span></div>
+                  <h3 className="mt-7 text-2xl font-semibold tracking-[-0.03em]">{department.name}</h3>
+                  <p className="mt-3 max-w-md text-sm leading-7 text-[#90969a]">{department.copy}</p>
+                  {department.targetUrl && <a href={department.targetUrl} target="_blank" rel="noreferrer" className="mt-5 inline-block text-sm font-bold text-[#efc76e]">{department.linkLabel || "Mehr erfahren"} ↗</a>}
+                </div>
               </article>
             ))}
           </div>

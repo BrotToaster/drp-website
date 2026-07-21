@@ -18,6 +18,7 @@ export default async function StaffFaqPage({ searchParams }: { searchParams: Pro
   const fields = (item?: typeof items[number]) => (
     <>
       {item && <input type="hidden" name="id" value={item.id} />}
+      <label className="field-label">Kategorie<input className="field" name="category" defaultValue={item?.category || "Allgemein"} required /></label>
       <label className="field-label">Frage<input className="field" name="question" defaultValue={item?.question} required /></label>
       <label className="field-label">Antwort<textarea className="field min-h-32" name="answer" defaultValue={item?.answer} required /></label>
       <div className="grid gap-3 sm:grid-cols-[140px_1fr]">

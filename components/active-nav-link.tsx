@@ -16,6 +16,7 @@ export function ActiveNavLink({
   className = "",
   activeClassName = "",
   exact,
+  onNavigate,
   ...props
 }: Props) {
   const pathname = usePathname();
@@ -24,6 +25,11 @@ export function ActiveNavLink({
   return (
     <Link
       href={href}
+      prefetch
+      onNavigate={(event) => {
+        window.dispatchEvent(new Event("drp:navigation-start"));
+        onNavigate?.(event);
+      }}
       className={[className, active ? activeClassName : ""].filter(Boolean).join(" ")}
       aria-current={active ? "page" : undefined}
       {...props}
