@@ -1,0 +1,19 @@
+{
+  "discord_token": "HIER_DEN_NEUEN_DISCORD_BOT_TOKEN_EINTRAGEN",
+  "guild_id": 123456789012345678,
+  "website_url": "https://drpg.up.railway.app",
+  "bot_ingest_token": "HIER_DEN_BOT_INGEST_TOKEN_DER_WEBSITE_EINTRAGEN",
+  "sync": {
+    "full_sync_hours": 6,
+    "role_job_poll_seconds": 20,
+    "member_batch_size": 500,
+    "request_timeout_seconds": 30,
+    "request_retries": 3
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/drp-bot.log",
+    "max_bytes": 5242880,
+    "backup_count": 5
+  }
+}

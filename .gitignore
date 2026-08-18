@@ -10,3 +10,8 @@ prisma/dev.db
 prisma/dev.db-journal
 *.log
 *.tsbuildinfo
+discord-bot/config.json
+discord-bot/.venv/
+discord-bot/logs/
+discord-bot/__pycache__/
+discord-bot/*.pyc
