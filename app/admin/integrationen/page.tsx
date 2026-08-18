@@ -7,15 +7,19 @@ export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
   const { authorization } = await requirePermission("integrations.view");
-  const [lastRoleSync, lastMemberSync] = await Promise.all([
+  const [lastRoleSync, lastMemberSync, lastMelonlySync, lastJobRun] = await Promise.all([
     prisma.botSyncReceipt.findFirst({ where: { kind: "DISCORD_ROLES" }, orderBy: { createdAt: "desc" } }),
     prisma.botSyncReceipt.findFirst({ where: { kind: "DISCORD_MEMBERS" }, orderBy: { createdAt: "desc" } }),
+    prisma.melonlyMember.findFirst({ orderBy: { lastSyncedAt: "desc" }, select: { lastSyncedAt: true } }),
+    prisma.scheduledJobRun.findFirst({ orderBy: { startedAt: "desc" } }),
   ]);
   const integrations = [
     ["Discord-Bot", Boolean(process.env.BOT_INGEST_TOKEN), lastMemberSync?.createdAt],
     ["Discord-Rollensync", Boolean(lastRoleSync), lastRoleSync?.createdAt],
     ["ER:LC v2", Boolean(process.env.ERLC_SERVER_KEY), null],
     ["Cloudinary", cloudinaryConfigured, null],
+    ["Melonly", Boolean(process.env.MELONLY_API_TOKEN), lastMelonlySync?.lastSyncedAt],
+    ["Railway-Cronjob", Boolean(lastJobRun), lastJobRun?.finishedAt || lastJobRun?.startedAt],
   ] as const;
   return (
     <PortalShell authorization={authorization} title="Integrationsstatus" description="Nur Statusinformationen – Geheimnisse werden weder angezeigt noch in der Datenbank gespeichert." section="admin">

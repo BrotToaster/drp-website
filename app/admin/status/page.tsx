@@ -5,6 +5,7 @@ import {
 } from "@/app/actions/admin-content";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PortalShell } from "@/components/portal-shell";
+import { ReliableActionForm } from "@/components/reliable-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { requirePermission } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -15,9 +16,8 @@ export const dynamic = "force-dynamic";
 
 const statusValues = ["OPERATIONAL", "DEGRADED", "PARTIAL_OUTAGE", "MAJOR_OUTAGE", "MAINTENANCE", "UNKNOWN"] as const;
 
-export default async function StatusAdminPage({ searchParams }: { searchParams: Promise<{ error?: string; saved?: string }> }) {
+export default async function StatusAdminPage() {
   const { authorization } = await requirePermission("status.manage");
-  const query = await searchParams;
   const services = await prisma.statusService.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { updates: { orderBy: { createdAt: "desc" }, take: 3 } },
@@ -38,10 +38,9 @@ export default async function StatusAdminPage({ searchParams }: { searchParams: 
 
   return (
     <PortalShell authorization={authorization} title="Status" description="Automatische Dienste schalten und eigene Statusobjekte mit öffentlichen Meldungen verwalten." section="admin">
-      {(query.error || query.saved) && <p role={query.error ? "alert" : "status"} className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>{query.error === "message" ? "Bei Störung oder Wartung ist eine Nachricht mit mindestens fünf Zeichen Pflicht." : query.error ? "Die Statusänderung konnte nicht gespeichert werden." : "Statusverwaltung wurde aktualisiert."}</p>}
       <details className="surface mb-5 p-6">
         <summary className="cursor-pointer font-semibold text-[#efc76e]">Manuellen Dienst hinzufügen</summary>
-        <form action={saveStatusServiceAction} className="mt-6 grid gap-4">{serviceFields()}</form>
+        <ReliableActionForm action={saveStatusServiceAction} resetOnSuccess className="mt-6 grid gap-4">{serviceFields()}</ReliableActionForm>
       </details>
       <div className="grid gap-4">
         {services.map((service) => (
@@ -53,9 +52,9 @@ export default async function StatusAdminPage({ searchParams }: { searchParams: 
               </div>
             </summary>
             <div className="mt-6 grid gap-5 border-t border-white/[0.07] pt-6">
-              <form action={saveStatusServiceAction} className="grid gap-4">{serviceFields(service)}</form>
+              <ReliableActionForm action={saveStatusServiceAction} className="grid gap-4">{serviceFields(service)}</ReliableActionForm>
               {service.source === "MANUAL" && (
-                <form action={updateManualStatusAction} className="grid gap-4 rounded-xl border border-white/[0.07] p-4">
+                <ReliableActionForm action={updateManualStatusAction} resetOnSuccess className="grid gap-4 rounded-xl border border-white/[0.07] p-4">
                   <input type="hidden" name="serviceId" value={service.id} />
                   <h3 className="font-semibold">Statusmeldung veröffentlichen</h3>
                   <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -63,13 +62,13 @@ export default async function StatusAdminPage({ searchParams }: { searchParams: 
                     <label className="field-label">Nachricht<textarea className="field min-h-24" name="message" placeholder="Bei einer Störung oder Wartung verpflichtend" /></label>
                   </div>
                   <SubmitButton>Status veröffentlichen</SubmitButton>
-                </form>
+                </ReliableActionForm>
               )}
               {service.source === "MANUAL" && (
-                <form action={deleteStatusServiceAction}>
+                <ReliableActionForm action={deleteStatusServiceAction}>
                   <input type="hidden" name="id" value={service.id} />
                   <ConfirmSubmitButton message="Diesen manuellen Dienst und alle Statusmeldungen löschen?">Dienst löschen</ConfirmSubmitButton>
-                </form>
+                </ReliableActionForm>
               )}
               {service.updates.length > 0 && <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[#777d81]">Letzte Meldungen</p><div className="grid gap-2">{service.updates.map((update) => <div key={update.id} className="rounded-xl bg-white/[0.025] p-3 text-xs text-[#8d9397]">{formatDateTime(update.createdAt)} · {statusLabels[update.status]}{update.message ? " · " + update.message : ""}</div>)}</div></div>}
             </div>

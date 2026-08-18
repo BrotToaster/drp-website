@@ -30,6 +30,17 @@ const permissionDefinitions = [
   ["news.publish", "News veröffentlichen", "News"],
   ["faq.view", "FAQ-Verwaltung anzeigen", "FAQ"],
   ["faq.manage", "FAQ verwalten", "FAQ"],
+  ["staff_faq.view", "Internes Staff-FAQ lesen", "Wissen"],
+  ["staff_faq.manage", "Internes Staff-FAQ verwalten", "Wissen"],
+  ["documents.access", "Interne Dokumente öffnen", "Wissen"],
+  ["documents.manage_categories", "Dokumentkategorien und Zugriffe verwalten", "Wissen"],
+  ["calendar.manage_categories", "Kalenderkategorien und Zugriffe verwalten", "Kalender"],
+  ["team_activity.view_self", "Eigene Teamaktivität anzeigen", "Team"],
+  ["team_activity.view_all", "Teamaktivität aller Mitglieder anzeigen", "Team"],
+  ["team_activity.review", "Wochenempfehlungen entscheiden", "Team"],
+  ["melonly.manage", "Melonly-Integration verwalten", "Team"],
+  ["erlc.check", "ER:LC-Status manuell prüfen", "Serverbetrieb"],
+  ["erlc.details.view", "Sensible ER:LC-Details anzeigen", "Serverbetrieb"],
   ["audit.view", "Audit-Log anzeigen", "Kontrolle"],
   ["roles.manage", "Rollen und Rechte verwalten", "Administration"],
   ["discord.manage", "Discord-Zuordnungen verwalten", "Administration"],
@@ -51,8 +62,8 @@ const roleDefinitions = [
 
 const rolePermissionKeys = {
   PLAYER: [],
-  SUPPORTER: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view"],
-  MODERATOR: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view", "rules.view", "news.view", "audit.view"],
+  SUPPORTER: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view", "staff_faq.view", "documents.access", "team_activity.view_self", "erlc.check"],
+  MODERATOR: ["staff.access", "tickets.view", "tickets.reply", "tickets.assign", "tickets.status", "users.view", "rules.view", "news.view", "audit.view", "staff_faq.view", "documents.access", "team_activity.view_self", "erlc.check", "erlc.details.view"],
   ADMIN: permissionDefinitions.map(([key]) => key).filter((key) => key !== "roles.manage"),
   OWNER: permissionDefinitions.map(([key]) => key),
 };
@@ -80,12 +91,12 @@ async function main() {
       create: { key, name, color, priority, isSystem: true },
     });
     roles.set(key, role);
-    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
     await prisma.rolePermission.createMany({
       data: rolePermissionKeys[key].map((permissionKey) => ({
         roleId: role.id,
         permissionId: permissions.get(permissionKey).id,
       })),
+      skipDuplicates: true,
     });
   }
 
@@ -122,23 +133,23 @@ async function main() {
     });
   }
 
-  await prisma.ruleAcceptance.deleteMany();
   for (const rule of fixture.rules) {
     const record = await prisma.rule.upsert({
       where: { sourceKey: rule.sourceKey },
-      update: { slug: rule.sourceKey, sourceUrl: rule.sourceUrl, category: rule.category, title: rule.title, order: rule.order, version: 1, published: true },
+      update: {},
       create: { slug: rule.sourceKey, sourceKey: rule.sourceKey, sourceUrl: rule.sourceUrl, category: rule.category, title: rule.title, order: rule.order, version: 1, published: true },
     });
-    await prisma.ruleRevision.deleteMany({ where: { ruleId: record.id } });
-    await prisma.ruleRevision.create({
-      data: {
-        ruleId: record.id,
-        status: "PUBLISHED",
-        content: rule.content,
-        searchText: JSON.stringify(rule.content),
-        publishedAt: new Date(),
-      },
-    });
+    if (!(await prisma.ruleRevision.count({ where: { ruleId: record.id } }))) {
+      await prisma.ruleRevision.create({
+        data: {
+          ruleId: record.id,
+          status: "PUBLISHED",
+          content: rule.content,
+          searchText: JSON.stringify(rule.content),
+          publishedAt: new Date(),
+        },
+      });
+    }
   }
 
   const post = await prisma.newsPost.upsert({
@@ -168,7 +179,7 @@ async function main() {
   for (const [id, question, answer, sortOrder] of faqItems) {
     await prisma.faqItem.upsert({
       where: { id },
-      update: { question, answer, sortOrder },
+      update: {},
       create: { id, question, answer, sortOrder },
     });
   }
@@ -197,6 +208,38 @@ async function main() {
     update: { data: { inviteCode: "drpg", members: 0, online: 0 } },
     create: { namespace: "public", key: "discord", data: { inviteCode: "drpg", members: 0, online: 0 } },
   });
+
+  const documentCategory = await prisma.internalDocumentCategory.upsert({
+    where: { slug: "allgemein" },
+    update: {},
+    create: { slug: "allgemein", title: "Allgemein", description: "Interne Informationen und Arbeitsunterlagen für das DRP-Team.", sortOrder: 10 },
+  });
+  const calendarCategory = await prisma.calendarCategory.upsert({
+    where: { slug: "community" },
+    update: {},
+    create: { slug: "community", title: "Community", description: "Öffentliche Community- und Servertermine.", color: "#d6aa4c", sortOrder: 10 },
+  });
+  for (const roleKey of ["SUPPORTER", "MODERATOR", "ADMIN", "OWNER"]) {
+    const role = roles.get(roleKey);
+    await prisma.roleDocumentCategoryAccess.upsert({
+      where: { roleId_categoryId: { roleId: role.id, categoryId: documentCategory.id } },
+      update: {},
+      create: { roleId: role.id, categoryId: documentCategory.id, canView: true, canCreate: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey), canEdit: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey), canManage: ["ADMIN", "OWNER"].includes(roleKey) },
+    });
+    await prisma.roleCalendarCategoryAccess.upsert({
+      where: { roleId_categoryId: { roleId: role.id, categoryId: calendarCategory.id } },
+      update: {},
+      create: { roleId: role.id, categoryId: calendarCategory.id, canCreate: true, canPublish: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey), canEditOwn: true, canManage: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey) },
+    });
+  }
+  for (const [id, key, enabled] of [
+    ["team-role-strike-1", "STRIKE_1", true],
+    ["team-role-strike-2", "STRIKE_2", true],
+    ["team-role-strike-3", "STRIKE_3", true],
+    ["team-role-uprank-block", "UPRANK_BLOCK", true],
+  ]) {
+    await prisma.discordTeamRoleMapping.upsert({ where: { key }, update: {}, create: { id, key, enabled } });
+  }
 }
 
 main()

@@ -1,0 +1,22 @@
+import { saveCalendarCategoryAccessAction, saveCalendarCategoryAction } from "@/app/actions/calendar";
+import { MediaUploader } from "@/components/media-uploader";
+import { PortalShell } from "@/components/portal-shell";
+import { ReliableActionForm } from "@/components/reliable-action-form";
+import { SubmitButton } from "@/components/submit-button";
+import { requirePermission } from "@/lib/authz";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export default async function CalendarAdminPage() {
+  const { authorization } = await requirePermission("calendar.manage_categories");
+  const [categories, roles] = await Promise.all([
+    prisma.calendarCategory.findMany({ include: { image: true, roleAccess: true }, orderBy: [{ sortOrder: "asc" }, { title: "asc" }] }),
+    prisma.accessRole.findMany({ orderBy: { priority: "desc" } }),
+  ]);
+  const fields = (category?: typeof categories[number]) => <><input type="hidden" name="id" value={category?.id || ""} /><div className="grid gap-4 md:grid-cols-[1fr_1.5fr_110px_100px]"><label className="field-label">Name<input className="field" name="title" defaultValue={category?.title || ""} required /></label><label className="field-label">Beschreibung<input className="field" name="description" defaultValue={category?.description || ""} /></label><label className="field-label">Farbe<input className="field h-12" type="color" name="color" defaultValue={category?.color || "#d6aa4c"} /></label><label className="field-label">Sortierung<input className="field" type="number" name="sortOrder" min="0" defaultValue={category?.sortOrder || 0} /></label></div><MediaUploader inputName="imageId" single imagesOnly label="Kategorienbild hochladen" initialAssets={category?.image ? [{ id: category.image.id, url: category.image.secureUrl, kind: category.image.kind, name: category.image.originalName }] : []} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" name="visible" defaultChecked={category?.visible ?? true} /> Öffentlich sichtbar</label><SubmitButton variant="secondary">Kategorie speichern</SubmitButton></>;
+  return <PortalShell authorization={authorization} title="Kalender & Zugriffe" description="Kategorien, Bilder und präzise Rollenrechte für Termine verwalten." section="admin">
+    <details className="surface mb-6 p-6"><summary className="cursor-pointer font-semibold text-[#efc76e]">Kategorie hinzufügen</summary><ReliableActionForm action={saveCalendarCategoryAction} resetOnSuccess className="mt-6 grid gap-4">{fields()}</ReliableActionForm></details>
+    <div className="grid gap-5">{categories.map((category) => <section key={category.id} className="surface p-6"><div className="flex items-center gap-3"><span className="h-3 w-3 rounded-full" style={{ backgroundColor: category.color }} /><h2 className="text-lg font-semibold">{category.title}</h2></div><ReliableActionForm action={saveCalendarCategoryAction} className="mt-5 grid gap-4 border-t border-white/[0.07] pt-5">{fields(category)}</ReliableActionForm><div className="mt-6 border-t border-white/[0.07] pt-5"><p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-[#777d81]">Rollenzugriffe</p><div className="grid gap-3">{roles.map((role) => { const access = category.roleAccess.find((item) => item.roleId === role.id); return <ReliableActionForm key={role.id} action={saveCalendarCategoryAccessAction} className="grid gap-3 rounded-xl border border-white/[0.07] p-4 xl:grid-cols-[180px_1fr_auto] xl:items-center"><input type="hidden" name="roleId" value={role.id} /><input type="hidden" name="categoryId" value={category.id} /><strong className="text-sm">{role.name}</strong><div className="flex flex-wrap gap-4 text-xs"><label className="flex items-center gap-2"><input type="checkbox" name="canCreate" defaultChecked={access?.canCreate} /> Erstellen</label><label className="flex items-center gap-2"><input type="checkbox" name="canEditOwn" defaultChecked={access?.canEditOwn} /> Eigene bearbeiten</label><label className="flex items-center gap-2"><input type="checkbox" name="canPublish" defaultChecked={access?.canPublish} /> Freigeben</label><label className="flex items-center gap-2"><input type="checkbox" name="canManage" defaultChecked={access?.canManage} /> Verwalten</label></div><SubmitButton variant="secondary" pendingText="Speichert …">Rechte speichern</SubmitButton></ReliableActionForm>; })}</div></div></section>)}</div>
+  </PortalShell>;
+}

@@ -1,21 +1,24 @@
 import Link from "next/link";
+import Image from "next/image";
 import { StatusPill } from "@/components/status-pill";
 import { NewsCard } from "@/components/news-card";
 import { RuleRotator } from "@/components/rule-rotator";
 import { ArrowLink, SectionHeading } from "@/components/ui";
 import { getPublishedNews, getPublishedRules } from "@/lib/data";
 import { getPublicServerStatus } from "@/lib/erlc";
+import { getOfficialErlcMapUrl } from "@/lib/erlc-map";
 import { getHomepageSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
 
 export default async function HomePage() {
-  const [status, news, rules, homepage] = await Promise.all([
+  const [status, news, rules, homepage, erlcMapUrl] = await Promise.all([
     getPublicServerStatus(),
     getPublishedNews(),
     getPublishedRules(),
     getHomepageSettings(),
+    getOfficialErlcMapUrl(),
   ]);
 
   return (
@@ -57,21 +60,9 @@ export default async function HomePage() {
                 <span className="badge badge-gold">{status.source === "demo" ? "Demo Live" : "Live"}</span>
               </div>
               <div className="relative h-[310px] overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#0b0e11]">
-                <svg viewBox="0 0 420 310" className="absolute inset-0 h-full w-full opacity-60" aria-hidden="true">
-                  <path d="M-30 82C72 35 116 96 198 77s122-68 264-18" fill="none" stroke="#31383d" strokeWidth="18" />
-                  <path d="M-20 235C94 219 113 151 207 164s127 101 257 73" fill="none" stroke="#252b30" strokeWidth="13" />
-                  <path d="M80-20c5 100 89 135 68 223s11 101 29 140" fill="none" stroke="#2c3338" strokeWidth="9" />
-                  <path d="M326-30c-31 104-16 162-74 212s-67 103-56 153" fill="none" stroke="#242a2f" strokeWidth="7" />
-                  <g fill="none" stroke="#d6aa4c" strokeOpacity=".38">
-                    <circle cx="148" cy="164" r="54" />
-                    <circle cx="148" cy="164" r="83" strokeDasharray="3 8" />
-                  </g>
-                </svg>
-                <div className="absolute left-[31%] top-[47%] grid h-9 w-9 place-items-center rounded-full border border-[#efc76e]/40 bg-[#d6aa4c]/20 shadow-[0_0_30px_rgba(214,170,76,.25)]">
-                  <span className="h-2 w-2 rounded-full bg-[#efc76e]" />
-                </div>
-                <div className="absolute right-[19%] top-[22%] h-2.5 w-2.5 rounded-full bg-[#57c98c] shadow-[0_0_16px_rgba(87,201,140,.7)]" />
-                <div className="absolute bottom-[20%] left-[18%] h-2.5 w-2.5 rounded-full bg-[#769fd4] shadow-[0_0_16px_rgba(118,159,212,.7)]" />
+                <Image src={erlcMapUrl} alt="Offizielle Karte von Liberty County" fill sizes="(max-width: 1024px) 100vw, 480px" className="object-cover opacity-75" priority />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#080a0c] via-transparent to-[#080a0c]/20" />
+                <p className="absolute right-3 top-3 rounded-lg border border-white/[0.08] bg-black/65 px-2 py-1 text-[9px] text-[#b6babd] backdrop-blur">Offizielle ER:LC-Karte</p>
                 <div className="absolute bottom-4 left-4 right-4 grid grid-cols-3 gap-2">
                   <div className="rounded-xl border border-white/[0.07] bg-[#0a0c0e]/90 p-3 backdrop-blur">
                     <p className="text-[9px] uppercase tracking-wider text-[#777d81]">Spieler</p>

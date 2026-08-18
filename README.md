@@ -6,7 +6,7 @@ Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und
 
 - Next.js 15 App Router, TypeScript und Tailwind CSS
 - Auth.js mit Discord und Roblox OAuth
-- PostgreSQL über Netlify Database und Prisma 6
+- PostgreSQL über Railway Postgres und Prisma 6
 - TipTap-JSON für versionierte Regeln und News
 - signierte Cloudinary-Direktuploads
 - kombinierbare Datenbankrollen mit Discord-Synchronisierung
@@ -32,7 +32,7 @@ Danach ist die Website unter http://localhost:3000 erreichbar. Docker wird nicht
 
 ## Netlify
 
-Die ausführliche Anleitung steht in [DEPLOY_NETLIFY.md](./DEPLOY_NETLIFY.md). Vor dem ersten Produktionsdeploy müssen alle Werte aus .env.example als Netlify Environment Variables hinterlegt werden. Geheimnisse gehören niemals in Git.
+Die aktuelle Anleitung steht in [DEPLOY_RAILWAY.md](./DEPLOY_RAILWAY.md). Die bisherige Netlify-Anleitung bleibt für einen einfachen Rückwechsel erhalten. Vor dem ersten Produktionsdeploy müssen alle Werte aus `.env.example` als Umgebungsvariablen hinterlegt werden. Geheimnisse gehören niemals in Git.
 
 Migrationen liegen unter netlify/database/migrations. Die Portal-v2-Migration:
 

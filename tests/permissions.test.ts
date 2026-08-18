@@ -29,6 +29,8 @@ const context: AuthorizationContext = {
       canDelete: true,
     },
   ],
+  documentAccess: [],
+  calendarAccess: [],
   isOwner: false,
 };
 

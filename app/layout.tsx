@@ -9,7 +9,7 @@ import { siteConfig } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.AUTH_URL || "https://drpg.netlify.app"),
+  metadataBase: new URL(process.env.AUTH_URL || "https://drpg.up.railway.app"),
   title: { default: "DRP – Deutschland Roleplay", template: "%s | DRP" },
   description: siteConfig.description,
   icons: { icon: "/drp-logo.png", apple: "/drp-logo.png" },

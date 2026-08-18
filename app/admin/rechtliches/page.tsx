@@ -1,5 +1,6 @@
 import { saveLegalSettingsAction } from "@/app/actions/admin-content";
 import { PortalShell } from "@/components/portal-shell";
+import { ReliableActionForm } from "@/components/reliable-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { requirePermission } from "@/lib/authz";
 import { getLegalSettings, getRetentionSettings, legalDetailsComplete } from "@/lib/legal-settings";
@@ -18,7 +19,7 @@ export default async function LegalAdminPage({ searchParams }: { searchParams: P
       {!legal.noAgeVerificationAcknowledged && <p className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-4 text-sm text-[#f28d8a]">Das Restrisiko des bewusst gewählten Modells ohne Altersprüfung wurde noch nicht bestätigt.</p>}
       {query.error && <p role="alert" className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-4 text-sm text-[#f28d8a]">{query.error === "incomplete" ? "Datenschutz kann erst mit vollständigem Namen, Schweizer Adresse und Kontakt-E-Mail veröffentlicht werden." : "Bitte prüfe die Eingaben."}</p>}
       {query.saved && <p role="status" className="mb-5 rounded-xl bg-[#57c98c]/10 p-4 text-sm text-[#75d7a3]">Rechtliche Einstellungen wurden gespeichert.</p>}
-      <form action={saveLegalSettingsAction} className="surface grid gap-6 p-6 md:p-8">
+      <ReliableActionForm action={saveLegalSettingsAction} className="surface grid gap-6 p-6 md:p-8">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="field-label">Betreibername<input className="field" name="operatorName" defaultValue={legal.operatorName} /></label>
           <label className="field-label">Kontakt-E-Mail<input className="field" type="email" name="contactEmail" defaultValue={legal.contactEmail} /></label>
@@ -42,7 +43,7 @@ export default async function LegalAdminPage({ searchParams }: { searchParams: P
           </div>
         </div>
         <div><SubmitButton>Rechtliches speichern</SubmitButton></div>
-      </form>
+      </ReliableActionForm>
     </PortalShell>
   );
 }

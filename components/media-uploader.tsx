@@ -5,7 +5,7 @@ import { useState } from "react";
 type Asset = {
   id: string;
   url: string;
-  kind: "IMAGE" | "AUDIO" | "VIDEO";
+  kind: "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
   name?: string;
   caption?: string | null;
 };
@@ -17,6 +17,7 @@ export function MediaUploader({
   single = false,
   label,
   imagesOnly = false,
+  internal = false,
 }: {
   inputName?: string;
   captionInputName?: string;
@@ -24,6 +25,7 @@ export function MediaUploader({
   single?: boolean;
   label?: string;
   imagesOnly?: boolean;
+  internal?: boolean;
 }) {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [status, setStatus] = useState("");
@@ -49,7 +51,7 @@ export function MediaUploader({
         const signResponse = await fetch("/api/media/sign", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: file.name, mimeType: file.type, bytes: file.size }),
+          body: JSON.stringify({ name: file.name, mimeType: file.type, bytes: file.size, scope: internal ? "internal" : "public" }),
         });
         const signed = await signResponse.json();
         if (!signResponse.ok) throw new Error(signed.error || "Upload nicht erlaubt.");
@@ -59,6 +61,7 @@ export function MediaUploader({
         body.append("api_key", signed.apiKey);
         body.append("timestamp", String(signed.timestamp));
         body.append("folder", signed.folder);
+        body.append("type", signed.deliveryType);
         body.append("signature", signed.signature);
         const cloudResponse = await fetch(
           `https://api.cloudinary.com/v1_1/${signed.cloudName}/${signed.resourceType}/upload`,
@@ -83,6 +86,7 @@ export function MediaUploader({
             duration: cloud.duration,
             version: cloud.version,
             signature: cloud.signature,
+            deliveryType: signed.deliveryType,
           }),
         });
         const complete = await completeResponse.json();
@@ -110,12 +114,12 @@ export function MediaUploader({
           className="sr-only"
           type="file"
           multiple={!single}
-          accept={imagesOnly ? "image/jpeg,image/png,image/webp,image/gif" : "image/jpeg,image/png,image/webp,image/gif,audio/mpeg,audio/wav,audio/ogg,audio/mp4,video/mp4,video/webm,video/quicktime"}
+          accept={imagesOnly ? "image/jpeg,image/png,image/webp,image/gif" : `image/jpeg,image/png,image/webp,image/gif,audio/mpeg,audio/wav,audio/ogg,audio/mp4,video/mp4,video/webm,video/quicktime${internal ? ",application/pdf" : ""}`}
           disabled={uploading}
           onChange={(event) => upload(event.target.files)}
         />
       </label>
-      <p className="text-xs text-[#777d81]">Bilder bis 10 MB · Audio bis 25 MB · Video bis 100 MB</p>
+      <p className="text-xs text-[#777d81]">Bilder bis 10 MB · Audio bis 25 MB · Video bis 100 MB{internal ? " · PDF bis 25 MB" : ""}</p>
       <p aria-live="polite" className="text-xs text-[#efc76e]">{status}</p>
       {assets.length > 0 && (
         <div className="grid gap-2">

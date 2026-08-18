@@ -43,10 +43,10 @@ export async function getPublishedRules(): Promise<RuleView[]> {
         order: rule.order,
         version: rule.version,
         updatedAt: rule.revisions[0].updatedAt,
-        media: rule.revisions[0].media.map((item) => ({
+        media: rule.revisions[0].media.filter((item) => item.media.kind !== "DOCUMENT").map((item) => ({
           id: item.media.id,
           url: item.media.secureUrl,
-          kind: item.media.kind,
+          kind: item.media.kind as "IMAGE" | "AUDIO" | "VIDEO",
           name: item.media.originalName,
           caption: item.caption,
         })),
@@ -85,10 +85,10 @@ export async function getPublishedNews(): Promise<NewsView[]> {
         publishedAt: post.publishedAt || new Date(),
         editedAt: post.editedAt,
         thumbnailUrl: post.thumbnail?.secureUrl || null,
-        media: post.revisions[0].media.map((item) => ({
+        media: post.revisions[0].media.filter((item) => item.media.kind !== "DOCUMENT").map((item) => ({
           id: item.media.id,
           url: item.media.secureUrl,
-          kind: item.media.kind,
+          kind: item.media.kind as "IMAGE" | "AUDIO" | "VIDEO",
           name: item.media.originalName,
           caption: item.caption,
         })),

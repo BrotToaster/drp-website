@@ -2,16 +2,17 @@
 
 import type { Prisma, ServiceStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { ActionResult } from "@/lib/action-result";
 import { requirePermission } from "@/lib/authz";
 import { legalDetailsComplete, legalSettingsSchema, retentionSettingsSchema } from "@/lib/legal-settings";
 import { prisma } from "@/lib/prisma";
 
 const text = (formData: FormData, key: string) => String(formData.get(key) || "").trim();
 
-export async function saveLegalSettingsAction(formData: FormData) {
-  const { user } = await requirePermission("legal.manage");
+export async function saveLegalSettingsAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user } = await requirePermission("legal.manage");
   const legal = legalSettingsSchema.safeParse({
     imprintEnabled: formData.get("imprintEnabled") === "on",
     privacyPublished: formData.get("privacyPublished") === "on",
@@ -30,9 +31,9 @@ export async function saveLegalSettingsAction(formData: FormData) {
     auditLogDays: Number(text(formData, "auditLogDays")),
     discordSnapshotDays: Number(text(formData, "discordSnapshotDays")),
   });
-  if (!legal.success || !retention.success) redirect("/admin/rechtliches?error=invalid");
+  if (!legal.success || !retention.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe die Betreiberangaben und Aufbewahrungsfristen." };
   if (legal.data.privacyPublished && !legalDetailsComplete(legal.data)) {
-    redirect("/admin/rechtliches?error=incomplete");
+    return { ok: false, code: "VALIDATION", message: "Vor der Veröffentlichung müssen Name, Adresse und Kontakt-E-Mail vollständig sein." };
   }
 
   await prisma.$transaction([
@@ -64,7 +65,10 @@ export async function saveLegalSettingsAction(formData: FormData) {
   revalidatePath("/impressum");
   revalidatePath("/datenschutz");
   revalidatePath("/admin/rechtliches");
-  redirect("/admin/rechtliches?saved=1");
+    return { ok: true, message: "Rechtliche Einstellungen wurden gespeichert." };
+  } catch {
+    return { ok: false, code: "SERVER", message: "Rechtliche Einstellungen konnten nicht gespeichert werden." };
+  }
 }
 
 const serviceSchema = z.object({
@@ -75,8 +79,9 @@ const serviceSchema = z.object({
   enabled: z.boolean(),
 });
 
-export async function saveStatusServiceAction(formData: FormData) {
-  const { user } = await requirePermission("status.manage");
+export async function saveStatusServiceAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user } = await requirePermission("status.manage");
   const parsed = serviceSchema.safeParse({
     id: text(formData, "id") || undefined,
     name: text(formData, "name"),
@@ -84,7 +89,7 @@ export async function saveStatusServiceAction(formData: FormData) {
     sortOrder: text(formData, "sortOrder"),
     enabled: formData.get("enabled") === "on",
   });
-  if (!parsed.success) redirect("/admin/status?error=invalid");
+  if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe Name, Beschreibung und Sortierung." };
   const existing = parsed.data.id ? await prisma.statusService.findUnique({ where: { id: parsed.data.id } }) : null;
   const service = existing
     ? await prisma.statusService.update({
@@ -120,7 +125,10 @@ export async function saveStatusServiceAction(formData: FormData) {
   revalidatePath("/status");
   revalidatePath("/api/status");
   revalidatePath("/admin/status");
-  redirect("/admin/status?saved=service");
+    return { ok: true, message: existing ? "Dienst wurde aktualisiert." : "Dienst wurde hinzugefügt." };
+  } catch {
+    return { ok: false, code: "SERVER", message: "Der Dienst konnte nicht gespeichert werden." };
+  }
 }
 
 const statusUpdateSchema = z.object({
@@ -129,19 +137,20 @@ const statusUpdateSchema = z.object({
   message: z.string().max(1000).optional(),
 });
 
-export async function updateManualStatusAction(formData: FormData) {
-  const { user } = await requirePermission("status.manage");
+export async function updateManualStatusAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user } = await requirePermission("status.manage");
   const parsed = statusUpdateSchema.safeParse({
     serviceId: text(formData, "serviceId"),
     status: text(formData, "status"),
     message: text(formData, "message") || undefined,
   });
-  if (!parsed.success) redirect("/admin/status?error=invalid");
+  if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Die Statusangabe ist ungültig." };
   if (parsed.data.status !== "OPERATIONAL" && (parsed.data.message?.length || 0) < 5) {
-    redirect("/admin/status?error=message");
+    return { ok: false, code: "VALIDATION", message: "Bei einer Störung oder Wartung ist eine Nachricht mit mindestens fünf Zeichen erforderlich." };
   }
   const service = await prisma.statusService.findUnique({ where: { id: parsed.data.serviceId } });
-  if (!service || service.source !== "MANUAL") redirect("/admin/status?error=service");
+  if (!service || service.source !== "MANUAL") return { ok: false, code: "VALIDATION", message: "Der manuelle Dienst wurde nicht gefunden." };
 
   await prisma.$transaction([
     prisma.statusService.update({
@@ -174,14 +183,18 @@ export async function updateManualStatusAction(formData: FormData) {
   revalidatePath("/status");
   revalidatePath("/api/status");
   revalidatePath("/admin/status");
-  redirect("/admin/status?saved=status");
+    return { ok: true, message: "Statusmeldung wurde veröffentlicht." };
+  } catch {
+    return { ok: false, code: "SERVER", message: "Die Statusmeldung konnte nicht gespeichert werden." };
+  }
 }
 
-export async function deleteStatusServiceAction(formData: FormData) {
-  const { user } = await requirePermission("status.manage");
+export async function deleteStatusServiceAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user } = await requirePermission("status.manage");
   const id = text(formData, "id");
   const service = await prisma.statusService.findUnique({ where: { id } });
-  if (!service || service.source !== "MANUAL") redirect("/admin/status?error=fixed");
+  if (!service || service.source !== "MANUAL") return { ok: false, code: "VALIDATION", message: "Automatische Dienste können nicht gelöscht werden." };
   await prisma.$transaction([
     prisma.auditLog.create({ data: { actorId: user.id, action: "STATUS_SERVICE_DELETED", entityType: "StatusService", entityId: id, metadata: { name: service.name } } }),
     prisma.statusService.delete({ where: { id } }),
@@ -189,4 +202,8 @@ export async function deleteStatusServiceAction(formData: FormData) {
   revalidatePath("/status");
   revalidatePath("/api/status");
   revalidatePath("/admin/status");
+    return { ok: true, message: "Dienst wurde gelöscht." };
+  } catch {
+    return { ok: false, code: "SERVER", message: "Der Dienst konnte nicht gelöscht werden." };
+  }
 }

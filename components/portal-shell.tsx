@@ -20,12 +20,15 @@ const staffGroups: NavGroup[] = [
     { href: "/staff/nutzer", label: "Nutzer", permission: "users.view" },
   ] },
   { label: "Redaktion", items: [
+    { href: "/staff/kalender", label: "Kalender", permission: "staff.access" },
     { href: "/staff/regelwerk", label: "Regelwerk", permission: "rules.view" },
     { href: "/staff/news", label: "News", permission: "news.view" },
     { href: "/staff/faq", label: "Öffentliches FAQ", permission: "faq.view" },
   ] },
   { label: "Wissen & Kontrolle", items: [
     { href: "/staff/handbuch", label: "Staff-FAQ", permission: "staff_faq.view" },
+    { href: "/staff/dokumente", label: "Interne Dokumente", permission: "documents.access" },
+    { href: "/staff/aktivitaet", label: "Teamaktivität", permission: "team_activity.view_self" },
     { href: "/staff/audit", label: "Audit-Log", permission: "audit.view" },
   ] },
 ];
@@ -44,6 +47,9 @@ const adminGroups: NavGroup[] = [
   ] },
   { label: "System", items: [
     { href: "/admin/staff-faq", label: "Staff-FAQ verwalten", permission: "staff_faq.manage" },
+    { href: "/admin/dokumente", label: "Dokumente & Zugriffe", permission: "documents.manage_categories" },
+    { href: "/admin/kalender", label: "Kalender & Zugriffe", permission: "calendar.manage_categories" },
+    { href: "/admin/melonly", label: "Melonly & Team", permission: "melonly.manage" },
     { href: "/admin/rechtliches", label: "Rechtliches", permission: "legal.manage" },
     { href: "/admin/integrationen", label: "Integrationen", permission: "integrations.view" },
   ] },

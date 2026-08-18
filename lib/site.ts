@@ -10,6 +10,7 @@ export const siteConfig = {
     { href: "/", label: "Start" },
     { href: "/server", label: "Server" },
     { href: "/status", label: "Status" },
+    { href: "/kalender", label: "Kalender" },
     { href: "/regelwerk", label: "Regelwerk" },
     { href: "/news", label: "News" },
     { href: "/team", label: "Team" },

@@ -10,12 +10,30 @@ export type TicketAccess = {
   canDelete: boolean;
 };
 
+export type DocumentAccess = {
+  categoryId: string;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canManage: boolean;
+};
+
+export type CalendarAccess = {
+  categoryId: string;
+  canCreate: boolean;
+  canPublish: boolean;
+  canEditOwn: boolean;
+  canManage: boolean;
+};
+
 export type AuthorizationContext = {
   userId: string;
   roleNames: string[];
   primaryRole: string;
   permissions: PermissionKey[];
   ticketAccess: TicketAccess[];
+  documentAccess: DocumentAccess[];
+  calendarAccess: CalendarAccess[];
   isOwner: boolean;
 };
 
@@ -24,6 +42,28 @@ export function hasPermission(
   permission: PermissionKey,
 ) {
   return context.isOwner || context.permissions.includes(permission);
+}
+
+export function canAccessDocumentCategory(
+  context: AuthorizationContext,
+  categoryId: string,
+  ability: "canView" | "canCreate" | "canEdit" | "canManage",
+) {
+  if (context.isOwner) return true;
+  return context.documentAccess.some(
+    (access) => access.categoryId === categoryId && access[ability],
+  );
+}
+
+export function canAccessCalendarCategory(
+  context: AuthorizationContext,
+  categoryId: string,
+  ability: "canCreate" | "canPublish" | "canEditOwn" | "canManage",
+) {
+  if (context.isOwner) return true;
+  return context.calendarAccess.some(
+    (access) => access.categoryId === categoryId && access[ability],
+  );
 }
 
 export function canAccessTicketCategory(

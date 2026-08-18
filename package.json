@@ -18,7 +18,8 @@
     "db:apply": "netlify database migrations apply",
     "db:status": "netlify database status",
     "db:migrate": "netlify database migrations new",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "jobs:tick": "tsx scripts/railway-jobs.ts"
   },
   "dependencies": {
     "@netlify/database": "^1.1.0",
@@ -33,6 +34,7 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tsx": "^4.20.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

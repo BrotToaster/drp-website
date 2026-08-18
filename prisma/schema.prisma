@@ -23,6 +23,66 @@ enum MediaKind {
   IMAGE
   AUDIO
   VIDEO
+  DOCUMENT
+}
+
+enum MediaVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+enum CalendarEventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RecurrenceFrequency {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum WeeklyRecommendation {
+  UPRANK
+  LOA
+  STRIKE
+  BLOCKED
+  REMOVAL
+  NO_ACTION
+}
+
+enum ReviewDecision {
+  PENDING
+  APPLIED
+  REJECTED
+  CORRECTED
+}
+
+enum TeamStrikeStatus {
+  ACTIVE
+  WAIVED
+  EXPIRED
+}
+
+enum DiscordRoleJobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum DiscordRoleOperation {
+  ADD
+  REMOVE
+}
+
+enum ScheduledJobStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
 }
 
 enum TicketStatus {
@@ -50,40 +110,48 @@ enum ServiceStatus {
 }
 
 model User {
-  id                     String               @id @default(cuid())
-  discordId              String?              @unique
+  id                     String                     @id @default(cuid())
+  discordId              String?                    @unique
   discordUsername        String?
   discordDisplayName     String?
   discordAvatarUrl       String?
   discordSyncedAt        DateTime?
-  email                  String?              @unique
+  email                  String?                    @unique
   name                   String
   avatar                 String?
   robloxName             String?
   robloxDisplayName      String?
   robloxAvatarUrl        String?
   robloxSyncedAt         DateTime?
-  robloxUserId           String?              @unique
-  registrationCompleted  Boolean              @default(false)
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  robloxUserId           String?                    @unique
+  registrationCompleted  Boolean                    @default(false)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
   accounts               AuthAccount[]
   staffProfile           StaffProfile?
   ruleAcceptances        RuleAcceptance[]
-  tickets                Ticket[]             @relation("TicketOwner")
-  assignedTickets        Ticket[]             @relation("TicketAssignee")
+  tickets                Ticket[]                   @relation("TicketOwner")
+  assignedTickets        Ticket[]                   @relation("TicketAssignee")
   ticketMessages         TicketMessage[]
   authoredNews           NewsPost[]
   auditLogs              AuditLog[]
-  roleAssignments        UserRoleAssignment[] @relation("UserRoleAssignments")
-  grantedRoleAssignments UserRoleAssignment[] @relation("RoleAssignmentActor")
-  ruleRevisions          RuleRevision[]       @relation("RuleRevisionEditor")
-  newsRevisions          NewsRevision[]       @relation("NewsRevisionEditor")
-  uploadedMedia          MediaAsset[]         @relation("MediaUploader")
-  editedFaqItems         FaqItem[]            @relation("FaqItemEditor")
-  editedStaffFaqItems    StaffFaqItem[]       @relation("StaffFaqItemEditor")
-  editedHomepageCards    HomepageRoleCard[]   @relation("HomepageRoleCardEditor")
-  statusUpdates          StatusUpdate[]       @relation("StatusUpdateAuthor")
+  roleAssignments        UserRoleAssignment[]       @relation("UserRoleAssignments")
+  grantedRoleAssignments UserRoleAssignment[]       @relation("RoleAssignmentActor")
+  ruleRevisions          RuleRevision[]             @relation("RuleRevisionEditor")
+  newsRevisions          NewsRevision[]             @relation("NewsRevisionEditor")
+  uploadedMedia          MediaAsset[]               @relation("MediaUploader")
+  editedFaqItems         FaqItem[]                  @relation("FaqItemEditor")
+  editedStaffFaqItems    StaffFaqItem[]             @relation("StaffFaqItemEditor")
+  editedHomepageCards    HomepageRoleCard[]         @relation("HomepageRoleCardEditor")
+  statusUpdates          StatusUpdate[]             @relation("StatusUpdateAuthor")
+  createdDocuments       InternalDocument[]         @relation("InternalDocumentCreator")
+  documentRevisions      InternalDocumentRevision[] @relation("InternalDocumentRevisionEditor")
+  createdCalendarEvents  CalendarEvent[]            @relation("CalendarEventCreator")
+  calendarRevisions      CalendarEventRevision[]    @relation("CalendarEventRevisionEditor")
+  reviewedCalendarItems  CalendarEventRevision[]    @relation("CalendarEventRevisionReviewer")
+  melonlyMember          MelonlyMember?
+  reviewedTeamResults    TeamWeeklyResult[]         @relation("TeamWeeklyResultReviewer")
+  issuedTeamStrikes      TeamStrike[]               @relation("TeamStrikeIssuer")
 }
 
 model AuthAccount {
@@ -118,19 +186,21 @@ model StaffProfile {
 }
 
 model AccessRole {
-  id              String                     @id @default(cuid())
-  key             String                     @unique
-  name            String                     @unique
-  description     String?
-  color           String                     @default("#d6aa4c")
-  priority        Int                        @default(0)
-  isSystem        Boolean                    @default(false)
-  createdAt       DateTime                   @default(now())
-  updatedAt       DateTime                   @updatedAt
-  permissions     RolePermission[]
-  assignments     UserRoleAssignment[]
-  discordMappings DiscordRoleMapping[]
-  ticketAccesses  RoleTicketCategoryAccess[]
+  id               String                       @id @default(cuid())
+  key              String                       @unique
+  name             String                       @unique
+  description      String?
+  color            String                       @default("#d6aa4c")
+  priority         Int                          @default(0)
+  isSystem         Boolean                      @default(false)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  permissions      RolePermission[]
+  assignments      UserRoleAssignment[]
+  discordMappings  DiscordRoleMapping[]
+  ticketAccesses   RoleTicketCategoryAccess[]
+  documentAccesses RoleDocumentCategoryAccess[]
+  calendarAccesses RoleCalendarCategoryAccess[]
 }
 
 model Permission {
@@ -170,15 +240,17 @@ model UserRoleAssignment {
 }
 
 model DiscordRole {
-  id            String               @id @default(cuid())
+  id            String                   @id @default(cuid())
   guildId       String
   discordRoleId String
   name          String
   color         String?
-  position      Int                  @default(0)
-  managed       Boolean              @default(false)
-  lastSyncedAt  DateTime             @default(now())
+  position      Int                      @default(0)
+  managed       Boolean                  @default(false)
+  lastSyncedAt  DateTime                 @default(now())
   mappings      DiscordRoleMapping[]
+  teamMappings  DiscordTeamRoleMapping[]
+  roleJobs      DiscordRoleJob[]
 
   @@unique([guildId, discordRoleId])
   @@index([guildId, position])
@@ -344,25 +416,31 @@ model NewsRevisionMedia {
 }
 
 model MediaAsset {
-  id             String              @id @default(cuid())
-  publicId       String              @unique
-  secureUrl      String
-  resourceType   String
-  kind           MediaKind
-  mimeType       String
-  originalName   String
-  bytes          Int
-  width          Int?
-  height         Int?
-  duration       Float?
-  createdById    String?
-  createdAt      DateTime            @default(now())
-  createdBy      User?               @relation("MediaUploader", fields: [createdById], references: [id], onDelete: SetNull)
-  ruleRevisions  RuleRevisionMedia[]
-  newsRevisions  NewsRevisionMedia[]
-  newsThumbnails NewsPost[]          @relation("NewsThumbnail")
-  teamImages     StaffProfile[]      @relation("TeamProfileImage")
-  homepageCards  HomepageRoleCard[]  @relation("HomepageRoleCardImage")
+  id                 String                          @id @default(cuid())
+  publicId           String                          @unique
+  secureUrl          String
+  resourceType       String
+  kind               MediaKind
+  visibility         MediaVisibility                 @default(PUBLIC)
+  deliveryType       String                          @default("upload")
+  mimeType           String
+  originalName       String
+  bytes              Int
+  width              Int?
+  height             Int?
+  duration           Float?
+  createdById        String?
+  createdAt          DateTime                        @default(now())
+  createdBy          User?                           @relation("MediaUploader", fields: [createdById], references: [id], onDelete: SetNull)
+  ruleRevisions      RuleRevisionMedia[]
+  newsRevisions      NewsRevisionMedia[]
+  newsThumbnails     NewsPost[]                      @relation("NewsThumbnail")
+  teamImages         StaffProfile[]                  @relation("TeamProfileImage")
+  homepageCards      HomepageRoleCard[]              @relation("HomepageRoleCardImage")
+  documentRevisions  InternalDocumentRevisionMedia[]
+  calendarRevisions  CalendarEventRevisionMedia[]
+  calendarCovers     CalendarEventRevision[]         @relation("CalendarEventCover")
+  calendarCategories CalendarCategory[]              @relation("CalendarCategoryImage")
 }
 
 model Ticket {
@@ -467,6 +545,174 @@ model StaffFaqItem {
 
   @@index([categoryId, visible, sortOrder])
   @@index([updatedAt])
+}
+
+model InternalDocumentCategory {
+  id          String                       @id @default(cuid())
+  slug        String                       @unique
+  title       String
+  description String?
+  sortOrder   Int                          @default(0)
+  visible     Boolean                      @default(true)
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+  documents   InternalDocument[]
+  roleAccess  RoleDocumentCategoryAccess[]
+
+  @@index([visible, sortOrder])
+}
+
+model RoleDocumentCategoryAccess {
+  id         String                   @id @default(cuid())
+  roleId     String
+  categoryId String
+  canView    Boolean                  @default(false)
+  canCreate  Boolean                  @default(false)
+  canEdit    Boolean                  @default(false)
+  canManage  Boolean                  @default(false)
+  role       AccessRole               @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  category   InternalDocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, categoryId])
+  @@index([categoryId])
+}
+
+model InternalDocument {
+  id         String                     @id @default(cuid())
+  categoryId String
+  slug       String                     @unique
+  title      String
+  summary    String?
+  creatorId  String?
+  archivedAt DateTime?
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+  category   InternalDocumentCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  creator    User?                      @relation("InternalDocumentCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  revisions  InternalDocumentRevision[]
+
+  @@index([categoryId, archivedAt, updatedAt])
+}
+
+model InternalDocumentRevision {
+  id         String                          @id @default(cuid())
+  documentId String
+  version    Int
+  content    Json
+  searchText String
+  editorId   String?
+  createdAt  DateTime                        @default(now())
+  document   InternalDocument                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  editor     User?                           @relation("InternalDocumentRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+  media      InternalDocumentRevisionMedia[]
+
+  @@unique([documentId, version])
+  @@index([documentId, createdAt])
+}
+
+model InternalDocumentRevisionMedia {
+  id         String                   @id @default(cuid())
+  revisionId String
+  mediaId    String
+  sortOrder  Int                      @default(0)
+  caption    String?
+  revision   InternalDocumentRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  media      MediaAsset               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([revisionId, mediaId])
+}
+
+model CalendarCategory {
+  id          String                       @id @default(cuid())
+  slug        String                       @unique
+  title       String
+  description String?
+  color       String                       @default("#d6aa4c")
+  imageId     String?
+  sortOrder   Int                          @default(0)
+  visible     Boolean                      @default(true)
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+  image       MediaAsset?                  @relation("CalendarCategoryImage", fields: [imageId], references: [id], onDelete: SetNull)
+  events      CalendarEvent[]
+  roleAccess  RoleCalendarCategoryAccess[]
+
+  @@index([visible, sortOrder])
+}
+
+model RoleCalendarCategoryAccess {
+  id         String           @id @default(cuid())
+  roleId     String
+  categoryId String
+  canCreate  Boolean          @default(false)
+  canPublish Boolean          @default(false)
+  canEditOwn Boolean          @default(false)
+  canManage  Boolean          @default(false)
+  role       AccessRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  category   CalendarCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, categoryId])
+  @@index([categoryId])
+}
+
+model CalendarEvent {
+  id         String                  @id @default(cuid())
+  categoryId String
+  slug       String                  @unique
+  creatorId  String?
+  archivedAt DateTime?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  category   CalendarCategory        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  creator    User?                   @relation("CalendarEventCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  revisions  CalendarEventRevision[]
+
+  @@index([categoryId, archivedAt, updatedAt])
+}
+
+model CalendarEventRevision {
+  id                  String                       @id @default(cuid())
+  eventId             String
+  status              CalendarEventStatus          @default(DRAFT)
+  title               String
+  summary             String?
+  content             Json
+  searchText          String
+  location            String?
+  externalUrl         String?
+  coverImageId        String?
+  startsAt            DateTime
+  endsAt              DateTime
+  allDay              Boolean                      @default(false)
+  timeZone            String                       @default("Europe/Berlin")
+  recurrenceFrequency RecurrenceFrequency          @default(NONE)
+  recurrenceInterval  Int                          @default(1)
+  recurrenceUntil     DateTime?
+  editorId            String?
+  reviewerId          String?
+  createdAt           DateTime                     @default(now())
+  publishedAt         DateTime?
+  reviewedAt          DateTime?
+  event               CalendarEvent                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  editor              User?                        @relation("CalendarEventRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+  reviewer            User?                        @relation("CalendarEventRevisionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  coverImage          MediaAsset?                  @relation("CalendarEventCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  media               CalendarEventRevisionMedia[]
+
+  @@index([eventId, status, publishedAt])
+  @@index([status, startsAt, endsAt])
+}
+
+model CalendarEventRevisionMedia {
+  id         String                @id @default(cuid())
+  revisionId String
+  mediaId    String
+  sortOrder  Int                   @default(0)
+  caption    String?
+  revision   CalendarEventRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  media      MediaAsset            @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([revisionId, mediaId])
 }
 
 model HomepageRoleCard {
@@ -589,4 +835,196 @@ model BotSyncReceipt {
   externalId String   @unique
   kind       String
   createdAt  DateTime @default(now())
+}
+
+model MelonlyRole {
+  id                  String          @id @default(cuid())
+  externalId          String          @unique
+  name                String
+  position            Int             @default(0)
+  weeklyTargetMinutes Int             @default(0)
+  nextRoleId          String?
+  active              Boolean         @default(true)
+  lastSyncedAt        DateTime        @default(now())
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  nextRole            MelonlyRole?    @relation("MelonlyRoleProgression", fields: [nextRoleId], references: [id], onDelete: SetNull)
+  previousRoles       MelonlyRole[]   @relation("MelonlyRoleProgression")
+  members             MelonlyMember[]
+
+  @@index([active, position])
+}
+
+model MelonlyMember {
+  id              String             @id @default(cuid())
+  externalId      String             @unique
+  userId          String?            @unique
+  discordId       String?
+  robloxUserId    String?
+  displayName     String
+  roleId          String?
+  active          Boolean            @default(true)
+  joinedAt        DateTime?
+  lastSyncedAt    DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role            MelonlyRole?       @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  shifts          MelonlyShift[]
+  leaves          MelonlyLeave[]
+  weeklyResults   TeamWeeklyResult[]
+  strikes         TeamStrike[]
+  rankBlocks      TeamRankBlock[]
+  discordRoleJobs DiscordRoleJob[]
+
+  @@index([discordId])
+  @@index([robloxUserId])
+  @@index([active, roleId])
+}
+
+model MelonlyShift {
+  id              String        @id @default(cuid())
+  externalId      String        @unique
+  memberId        String
+  startsAt        DateTime
+  endsAt          DateTime?
+  durationMinutes Int           @default(0)
+  lastSyncedAt    DateTime      @default(now())
+  member          MelonlyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, startsAt])
+}
+
+model MelonlyLeave {
+  id           String        @id @default(cuid())
+  externalId   String        @unique
+  memberId     String
+  startsOn     DateTime      @db.Date
+  endsOn       DateTime      @db.Date
+  status       String
+  approved     Boolean       @default(false)
+  lastSyncedAt DateTime      @default(now())
+  member       MelonlyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, startsOn, endsOn])
+  @@index([approved, startsOn, endsOn])
+}
+
+model TeamWeeklyReview {
+  id             String             @id @default(cuid())
+  weekStart      DateTime           @db.Date
+  weekEnd        DateTime           @db.Date
+  reportText     String?
+  sourceSyncedAt DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  results        TeamWeeklyResult[]
+
+  @@unique([weekStart, weekEnd])
+  @@index([weekStart])
+}
+
+model TeamWeeklyResult {
+  id                  String               @id @default(cuid())
+  reviewId            String
+  memberId            String
+  requiredMinutes     Int                  @default(0)
+  actualMinutes       Int                  @default(0)
+  loaDays             Int                  @default(0)
+  activeStrikesBefore Int                  @default(0)
+  recommendation      WeeklyRecommendation
+  decision            ReviewDecision       @default(PENDING)
+  reason              String
+  notes               String?
+  reviewerId          String?
+  reviewedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  review              TeamWeeklyReview     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  member              MelonlyMember        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  reviewer            User?                @relation("TeamWeeklyResultReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  strike              TeamStrike?
+
+  @@unique([reviewId, memberId])
+  @@index([memberId, createdAt])
+  @@index([decision, recommendation])
+}
+
+model TeamStrike {
+  id        String            @id @default(cuid())
+  memberId  String
+  resultId  String?           @unique
+  reason    String
+  status    TeamStrikeStatus  @default(ACTIVE)
+  issuedAt  DateTime          @default(now())
+  expiresAt DateTime
+  issuerId  String?
+  waivedAt  DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  member    MelonlyMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  result    TeamWeeklyResult? @relation(fields: [resultId], references: [id], onDelete: SetNull)
+  issuer    User?             @relation("TeamStrikeIssuer", fields: [issuerId], references: [id], onDelete: SetNull)
+  rankBlock TeamRankBlock?
+
+  @@index([memberId, status, expiresAt])
+}
+
+model TeamRankBlock {
+  id             String        @id @default(cuid())
+  memberId       String
+  sourceStrikeId String        @unique
+  startsAt       DateTime      @default(now())
+  endsAt         DateTime
+  liftedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  member         MelonlyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sourceStrike   TeamStrike    @relation(fields: [sourceStrikeId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, endsAt, liftedAt])
+}
+
+model DiscordTeamRoleMapping {
+  id            String       @id @default(cuid())
+  key           String       @unique
+  discordRoleId String?
+  enabled       Boolean      @default(true)
+  updatedAt     DateTime     @updatedAt
+  discordRole   DiscordRole? @relation(fields: [discordRoleId], references: [id], onDelete: SetNull)
+}
+
+model DiscordRoleJob {
+  id            String               @id @default(cuid())
+  dedupeKey     String               @unique
+  memberId      String?
+  discordId     String
+  discordRoleId String
+  operation     DiscordRoleOperation
+  status        DiscordRoleJobStatus @default(PENDING)
+  attempts      Int                  @default(0)
+  availableAt   DateTime             @default(now())
+  lockedAt      DateTime?
+  completedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  member        MelonlyMember?       @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  discordRole   DiscordRole          @relation(fields: [discordRoleId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([discordId, createdAt])
+}
+
+model ScheduledJobRun {
+  id         String             @id @default(cuid())
+  runKey     String             @unique
+  jobKey     String
+  status     ScheduledJobStatus @default(RUNNING)
+  startedAt  DateTime           @default(now())
+  finishedAt DateTime?
+  details    Json?
+  error      String?
+
+  @@index([jobKey, startedAt])
+  @@index([status, startedAt])
 }

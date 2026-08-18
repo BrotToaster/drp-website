@@ -1,0 +1,75 @@
+# DRP auf Railway betreiben
+
+## 1. Website-Service
+
+Der Website-Service verwendet das GitHub-Repository und startet mit `npm run start`. Als Build-Befehl wird `npm run build` verwendet. Empfohlen ist Node.js 20.19 oder neuer.
+
+In Railway unter **drp-website → Variables** werden mindestens diese Variablen angelegt:
+
+```env
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+AUTH_URL=https://drpg.up.railway.app
+AUTH_TRUST_HOST=true
+AUTH_SECRET=EIN_LANGER_ZUFAELLSWERT
+AUTH_DISCORD_ID=
+AUTH_DISCORD_SECRET=
+AUTH_ROBLOX_ID=
+AUTH_ROBLOX_SECRET=
+AUTH_DEMO_MODE=false
+OWNER_DISCORD_ID=
+ERLC_SERVER_KEY=
+BOT_INGEST_TOKEN=EIN_ZWEITER_LANGER_ZUFAELLSWERT
+DISCORD_GUILD_ID=
+MELONLY_API_TOKEN=
+MELONLY_API_BASE_URL=https://api.melonly.xyz/api/v1
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+NEXT_PUBLIC_DISCORD_INVITE=https://discord.gg/drpg
+NEXT_PUBLIC_ROBLOX_JOIN_URL=https://www.roblox.com/games/2534724415/Emergency-Response-Liberty-County
+```
+
+`DATABASE_URL` wird als Railway-Referenz eingetragen, nicht als öffentliches Datenbankpasswort. Nach Änderungen an OAuth-Variablen muss der Website-Service neu bereitgestellt werden.
+
+## 2. Migration v5 anwenden
+
+Im Website-Container:
+
+```bash
+npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260818120000_portal_v5.sql
+node prisma/seed.mjs
+```
+
+Die Migration nur einmal ausführen. Anschließend die Website neu bereitstellen.
+
+## 3. Railway-Cronservice
+
+Im selben Railway-Projekt einen weiteren Service aus demselben GitHub-Repository erstellen. Er benötigt dieselben Variablen `DATABASE_URL`, `ERLC_SERVER_KEY` und `MELONLY_API_TOKEN`.
+
+- Start Command: `npm run jobs:tick`
+- Cron Schedule: `*/5 * * * *`
+
+Der Prozess beendet sich nach jedem Lauf. Datenbank-Sperren verhindern doppelte ER:LC-, Melonly- und Wochenauswertungen. ER:LC wird alle fünf Minuten geprüft; Detaildaten werden nur geladen, wenn Spieler online sind. Melonly wird höchstens einmal pro Stunde synchronisiert. Das setzt wegen der dokumentierten API-Limits in der Praxis Melonly Plus voraus.
+
+## 4. Discord-Bot
+
+Der Bot synchronisiert weiterhin Rollen und Mitglieder. Zusätzlich verarbeitet er Rollenaufträge:
+
+1. `GET /api/bot/discord/role-jobs` mit `Authorization: Bearer BOT_INGEST_TOKEN`.
+2. Für jeden Auftrag die angegebene Discord-Rolle hinzufügen oder entfernen.
+3. Ergebnisse an `POST /api/bot/discord/role-jobs` senden:
+
+```json
+{
+  "jobs": [
+    { "id": "job-id", "success": true },
+    { "id": "job-id-2", "success": false, "error": "Missing permissions" }
+  ]
+}
+```
+
+Die Bot-Rolle muss oberhalb der Strike- und Up-Rank-Sperrrollen stehen. Die Zuordnungen werden im Admin-Panel unter **Melonly & Team** festgelegt.
+
+## 5. OAuth-Weiterleitungen
+
+Im Discord Developer Portal muss `https://drpg.up.railway.app/api/auth/callback/discord` eingetragen sein. In Roblox wird entsprechend `https://drpg.up.railway.app/api/auth/callback/roblox` hinterlegt. Bei einer eigenen Domain werden beide URLs zusätzlich mit der endgültigen Domain eingetragen und `AUTH_URL` angepasst.

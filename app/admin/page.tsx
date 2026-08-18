@@ -9,24 +9,29 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const { authorization } = await requirePermission("admin.access");
-  const [roles, users, cards, state, discordSync, audit] = await Promise.all([
+  const [roles, users, cards, state, discordSync, audit, documents, calendarEvents] = await Promise.all([
     prisma.accessRole.count(),
     prisma.user.count(),
     prisma.homepageRoleCard.count(),
     prisma.erlcServerState.findUnique({ where: { id: "primary" } }),
     prisma.discordMemberSnapshot.findFirst({ orderBy: { lastSyncedAt: "desc" } }),
     prisma.auditLog.findMany({ include: { actor: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }),
+    prisma.internalDocument.count({ where: { archivedAt: null } }),
+    prisma.calendarEvent.count({ where: { archivedAt: null } }),
   ]);
   const cardsList = [
     ["Nutzer & Rollen", users, "/admin/nutzerrollen", "users.roles.assign"],
     ["Rollen & Rechte", roles, "/admin/rollen", "roles.manage"],
     ["Startseitenkarten", cards, "/admin/website", "site.manage"],
     ["Staff-FAQ", "Pflegen", "/admin/staff-faq", "staff_faq.manage"],
+    ["Interne Dokumente", documents, "/admin/dokumente", "documents.manage_categories"],
+    ["Kalendertermine", calendarEvents, "/admin/kalender", "calendar.manage_categories"],
   ] as const;
   const health = [
     ["ER:LC", state?.lastSuccessfulAt ? (state.errorMessage ? "Veraltet" : "Bereit") : "Nicht geprüft", state?.checkedAt],
     ["Discord-Synchronisierung", discordSync ? "Verbunden" : "Keine Daten", discordSync?.lastSyncedAt],
     ["Cloudinary", process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET ? "Konfiguriert" : "Unvollständig", null],
+    ["Melonly", process.env.MELONLY_API_TOKEN ? "Konfiguriert" : "Unvollständig", null],
   ] as const;
   return (
     <PortalShell authorization={authorization} title="Administration" description="Zugriffe, Website-Inhalte und Systemzustände zentral steuern." section="admin">
