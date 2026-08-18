@@ -14,12 +14,11 @@ function fiveMinuteKey(now: Date) {
 }
 
 async function runOnce(jobKey: string, runKey: string, task: () => Promise<unknown>) {
-  try {
-    await prisma.scheduledJobRun.create({ data: { jobKey, runKey } });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { skipped: true };
-    throw error;
-  }
+  const claim = await prisma.scheduledJobRun.createMany({
+    data: [{ jobKey, runKey }],
+    skipDuplicates: true,
+  });
+  if (!claim.count) return { skipped: true };
   try {
     const details = await task();
     await prisma.scheduledJobRun.update({ where: { runKey }, data: { status: "SUCCEEDED", finishedAt: new Date(), details: JSON.parse(JSON.stringify(details)) as Prisma.InputJsonValue } });
@@ -29,6 +28,34 @@ async function runOnce(jobKey: string, runKey: string, task: () => Promise<unkno
     await prisma.scheduledJobRun.update({ where: { runKey }, data: { status: "FAILED", finishedAt: new Date(), error: message } });
     throw error;
   }
+}
+
+async function refreshErlcForJob() {
+  const result = await refreshErlcTelemetry();
+  const state = result.state;
+  return {
+    ok: result.ok,
+    busy: result.busy,
+    error: "error" in result ? result.error : undefined,
+    state: state
+      ? {
+          id: state.id,
+          online: state.online,
+          source: state.source,
+          name: state.name,
+          currentPlayers: state.currentPlayers,
+          maxPlayers: state.maxPlayers,
+          queueCount: state.queueCount,
+          staffCount: state.staffCount,
+          vehicleCount: state.vehicleCount,
+          emergencyCount: state.emergencyCount,
+          modCallCount: state.modCallCount,
+          checkedAt: state.checkedAt,
+          lastSuccessfulAt: state.lastSuccessfulAt,
+          errorMessage: state.errorMessage,
+        }
+      : null,
+  };
 }
 
 async function retentionCleanup() {
@@ -47,7 +74,7 @@ async function main() {
   const now = new Date();
   const results: Record<string, unknown> = {};
   const tasks: Array<[string, () => Promise<unknown>]> = [
-    ["erlc", () => runOnce("erlc", `erlc:${fiveMinuteKey(now)}`, refreshErlcTelemetry)],
+    ["erlc", () => runOnce("erlc", `erlc:${fiveMinuteKey(now)}`, refreshErlcForJob)],
     ["team-expiry", () => runOnce("team-expiry", `team-expiry:${fiveMinuteKey(now)}`, () => expireTeamRoles(now))],
     ["retention", () => runOnce("retention", `retention:${now.toISOString().slice(0, 10)}`, retentionCleanup)],
   ];

@@ -2,7 +2,17 @@
 
 ## 1. Website-Service
 
-Der Website-Service verwendet das GitHub-Repository und startet mit `npm run start`. Als Build-Befehl wird `npm run build` verwendet. Empfohlen ist Node.js 20.19 oder neuer.
+Der Website-Service verwendet das GitHub-Repository und startet mit `npm run start`. Als Build-Befehl wird `npm run build` verwendet. Das Projekt legt Railway über `package.json` auf Node.js 22 fest. Lokal sollte Node.js 22.13 oder neuer aus der 22er-LTS-Reihe verwendet werden.
+
+Empfohlene Railway-Einstellungen für **drp-website → Settings → Deploy**:
+
+- Build Command: `npm run build`
+- Start Command: `npm run start`
+- Healthcheck Path: `/api/health`
+- Healthcheck Timeout: `120`
+- Pre-Deploy Command: nach erfolgreicher Migration leer lassen
+
+Unter **Variables** kann zusätzlich `RAILPACK_NODE_NPM_INSTALL=npm ci` gesetzt werden. Dadurch verwendet Railway exakt die geprüfte Lockdatei.
 
 In Railway unter **drp-website → Variables** werden mindestens diese Variablen angelegt:
 
@@ -31,6 +41,8 @@ NEXT_PUBLIC_ROBLOX_JOIN_URL=https://www.roblox.com/games/2534724415/Emergency-Re
 
 `DATABASE_URL` wird als Railway-Referenz eingetragen, nicht als öffentliches Datenbankpasswort. Nach Änderungen an OAuth-Variablen muss der Website-Service neu bereitgestellt werden.
 
+Nach jedem Deployment zeigt `https://drpg.up.railway.app/api/health` den aktuell laufenden Commit unter `version`. So lässt sich eindeutig erkennen, ob Railway wirklich die neue Version aktiviert hat und nicht auf ein älteres Deployment zurückgerollt ist.
+
 ## 2. Datenbank sichern und Migrationen anwenden
 
 Vor dem Rollout im Railway-Dashboard ein aktuelles PostgreSQL-Backup beziehungsweise einen Volume-Snapshot erstellen. Erst fortfahren, wenn die Sicherung als erfolgreich angezeigt wird. Die v6-Migration ist rein additiv und bewahrt bestehende Weekly-Berichte in `reportText`.
@@ -58,6 +70,9 @@ Im selben Railway-Projekt einen weiteren Service aus demselben GitHub-Repository
 
 - Start Command: `npm run jobs:tick`
 - Cron Schedule: `*/5 * * * *`
+- Build Command: `npx prisma generate`
+- Healthcheck: leer lassen, da der Job absichtlich keinen Webserver startet
+- Pre-Deploy Command: leer lassen
 
 Der Prozess beendet sich nach jedem Lauf. Datenbank-Sperren verhindern doppelte ER:LC-, Melonly- und Wochenauswertungen. ER:LC wird alle fünf Minuten geprüft; Detaildaten werden nur geladen, wenn Spieler online sind. Melonly wird höchstens einmal pro Stunde synchronisiert. Das setzt wegen der dokumentierten API-Limits in der Praxis Melonly Plus voraus.
 

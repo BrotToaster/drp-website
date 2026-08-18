@@ -15,6 +15,8 @@ Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und
 
 ## Lokal starten
 
+Voraussetzung ist Node.js 22.13 oder neuer aus der 22er-LTS-Reihe.
+
 ~~~powershell
 npm install
 Copy-Item .env.example .env
@@ -115,8 +117,7 @@ Die Fixture enthält eine SHA-256-Prüfsumme, die durch Tests abgesichert wird.
 ## Qualität
 
 ~~~powershell
-npm run lint
-npm run typecheck
-npm test
-npm run build
+npm run check
 ~~~
+
+Der Check führt ESLint, TypeScript, alle Unit-Tests, Prisma Generate und den vollständigen Next.js-Produktionsbuild nacheinander aus.

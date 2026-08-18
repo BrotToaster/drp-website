@@ -14,6 +14,11 @@ const datasourceUrl =
     ? configuredUrl
     : "postgresql://postgres:postgres@127.0.0.1:5432/drp";
 
+// Prisma still reads env("DATABASE_URL") while validating the schema. Keep it
+// aligned with the URL selected above so a stale SQLite value in a local .env
+// cannot break generate/validate after the project moved to PostgreSQL.
+process.env.DATABASE_URL = datasourceUrl;
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
