@@ -3,6 +3,7 @@ import { checkErlcAction } from "@/app/actions/portal-v4";
 import { PortalShell } from "@/components/portal-shell";
 import { ReliableActionForm } from "@/components/reliable-action-form";
 import { SubmitButton } from "@/components/submit-button";
+import { RelativeTime } from "@/components/relative-time";
 import { requirePermission } from "@/lib/authz";
 import { getStoredErlcTelemetry } from "@/lib/erlc-telemetry";
 import { hasPermission } from "@/lib/permissions";
@@ -39,7 +40,7 @@ export default async function StaffDashboardPage() {
     <PortalShell authorization={authorization} title="Einsatzübersicht" description="Tickets, Serverauslastung und aktuelle ER:LC-Lage in einem Arbeitsbereich." section="staff">
       <section className="surface mb-5 overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] p-5 md:p-6">
-          <div><div className="flex items-center gap-3"><span className={"status-dot " + (!state?.online ? "offline" : "")} /><h2 className="text-xl font-semibold">{state?.name || "DRP Private Server"}</h2><span className={"badge " + (!stale && state?.online ? "badge-gold" : "")}>{stale ? "Veraltet" : state?.online ? "Online" : "Nicht verfügbar"}</span></div><p className="mt-2 text-xs text-[#777d81]">Letzte Prüfung: {state?.checkedAt ? formatDateTime(state.checkedAt) : "noch nicht geprüft"}{state?.errorMessage ? " · " + state.errorMessage : ""}</p></div>
+          <div><div className="flex items-center gap-3"><span className={"status-dot " + (!state?.online ? "offline" : "")} /><h2 className="text-xl font-semibold">{state?.name || "DRP Private Server"}</h2><span className={"badge " + (!stale && state?.online ? "badge-gold" : "")}>{stale ? "Veraltet" : state?.online ? "Online" : "Nicht verfügbar"}</span></div><p className="mt-2 text-xs text-[#777d81]"><RelativeTime value={state?.lastSuccessfulAt?.toISOString() || null} />{state?.errorMessage && <><span> · </span><RelativeTime value={state.checkedAt?.toISOString() || null} prefix="Letzter Versuch" /><span> · {state.errorMessage}</span></>}</p></div>
           {hasPermission(authorization, "erlc.check") && <ReliableActionForm action={checkErlcAction}><SubmitButton variant="secondary" pendingText="ER:LC wird geprüft …">ER:LC jetzt prüfen</SubmitButton></ReliableActionForm>}
         </div>
         <div className="grid grid-cols-2 gap-px bg-white/[0.07] sm:grid-cols-4 lg:grid-cols-7">

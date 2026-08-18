@@ -251,6 +251,10 @@ model DiscordRole {
   mappings      DiscordRoleMapping[]
   teamMappings  DiscordTeamRoleMapping[]
   roleJobs      DiscordRoleJob[]
+  teamRank      DiscordTeamRank?          @relation("DiscordTeamRankRole")
+  previousRanks DiscordTeamRank[]         @relation("DiscordTeamRankNextRole")
+  rankHistoryFrom DiscordRankHistory[]    @relation("DiscordRankHistoryFrom")
+  rankHistoryTo   DiscordRankHistory[]    @relation("DiscordRankHistoryTo")
 
   @@unique([guildId, discordRoleId])
   @@index([guildId, position])
@@ -876,6 +880,7 @@ model MelonlyMember {
   strikes         TeamStrike[]
   rankBlocks      TeamRankBlock[]
   discordRoleJobs DiscordRoleJob[]
+  weeklyEntries   TeamWeeklyEntry[]
 
   @@index([discordId])
   @@index([robloxUserId])
@@ -916,12 +921,90 @@ model TeamWeeklyReview {
   weekEnd        DateTime           @db.Date
   reportText     String?
   sourceSyncedAt DateTime?
+  mentionMode    String             @default("CODE")
+  generatedAt    DateTime?
+  mostActiveMemberId String?
+  mostActiveDiscordId String?
+  mostActiveDisplayName String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   results        TeamWeeklyResult[]
+  entries        TeamWeeklyEntry[]
+  signatures     TeamWeeklySignature[]
 
   @@unique([weekStart, weekEnd])
   @@index([weekStart])
+}
+
+model DiscordTeamRank {
+  id                  String       @id @default(cuid())
+  discordRoleId       String       @unique
+  section             String       @default("MODERATION")
+  shortName           String
+  sortOrder           Int          @default(0)
+  weeklyTargetMinutes Int          @default(0)
+  nextDiscordRoleId   String?
+  outputLabel         String?
+  active              Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  discordRole         DiscordRole  @relation("DiscordTeamRankRole", fields: [discordRoleId], references: [id], onDelete: Cascade)
+  nextDiscordRole     DiscordRole? @relation("DiscordTeamRankNextRole", fields: [nextDiscordRoleId], references: [id], onDelete: SetNull)
+
+  @@index([active, section, sortOrder])
+}
+
+model DiscordRankHistory {
+  id             String       @id @default(cuid())
+  guildId        String
+  discordId      String
+  fromRoleId     String?
+  toRoleId       String?
+  fromLabel      String?
+  toLabel        String?
+  changedAt      DateTime
+  detectedAt     DateTime     @default(now())
+  fromRole       DiscordRole? @relation("DiscordRankHistoryFrom", fields: [fromRoleId], references: [id], onDelete: SetNull)
+  toRole         DiscordRole? @relation("DiscordRankHistoryTo", fields: [toRoleId], references: [id], onDelete: SetNull)
+
+  @@index([guildId, discordId, changedAt])
+  @@index([toRoleId, changedAt])
+}
+
+model TeamWeeklyEntry {
+  id          String           @id @default(cuid())
+  reviewId    String
+  memberId    String?
+  kind        String
+  section     String
+  discordId   String?
+  displayName String
+  fromLabel   String?
+  toLabel     String?
+  text        String?
+  sortOrder   Int              @default(0)
+  automatic   Boolean          @default(true)
+  included    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  review      TeamWeeklyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  member      MelonlyMember?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([reviewId, section, sortOrder])
+}
+
+model TeamWeeklySignature {
+  id          String           @id @default(cuid())
+  reviewId    String
+  discordId   String
+  displayName String
+  label       String
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  review      TeamWeeklyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, sortOrder])
 }
 
 model TeamWeeklyResult {

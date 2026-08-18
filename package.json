@@ -22,6 +22,7 @@
     "jobs:tick": "tsx scripts/railway-jobs.ts"
   },
   "dependencies": {
+    "@fullcalendar/react": "^7.0.2",
     "@netlify/database": "^1.1.0",
     "@prisma/client": "^6.10.0",
     "@tiptap/extension-image": "^3.28.0",
@@ -34,6 +35,7 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "temporal-polyfill": "^1.0.4",
     "tsx": "^4.20.0",
     "zod": "^3.24.2"
   },

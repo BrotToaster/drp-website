@@ -9,7 +9,9 @@ Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und
 - PostgreSQL über Railway Postgres und Prisma 6
 - TipTap-JSON für versionierte Regeln und News
 - signierte Cloudinary-Direktuploads
+- FullCalendar mit Tages-, Wochen-, Monats-, Jahres- und Agendaansicht
 - kombinierbare Datenbankrollen mit Discord-Synchronisierung
+- strukturierter Weekly Insider aus Discord-Rängen und Melonly-Zeiten
 
 ## Lokal starten
 
@@ -30,7 +32,7 @@ npm run db:seed
 
 Danach ist die Website unter http://localhost:3000 erreichbar. Docker wird nicht benötigt. npm run dev funktioniert nur, wenn DATABASE_URL auf eine erreichbare PostgreSQL-Datenbank zeigt.
 
-## Netlify
+## Railway
 
 Die aktuelle Anleitung steht in [DEPLOY_RAILWAY.md](./DEPLOY_RAILWAY.md). Die bisherige Netlify-Anleitung bleibt für einen einfachen Rückwechsel erhalten. Vor dem ersten Produktionsdeploy müssen alle Werte aus `.env.example` als Umgebungsvariablen hinterlegt werden. Geheimnisse gehören niemals in Git.
 

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import "@fullcalendar/react/skeleton.css";
+import "@fullcalendar/react/themes/classic/theme.css";
+import "@fullcalendar/react/themes/classic/palette.css";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { NavigationProgress } from "@/components/navigation-progress";

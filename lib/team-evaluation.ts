@@ -13,8 +13,8 @@ export type WeeklyEvaluation = { recommendation: WeeklyRecommendation; reason: s
 
 export function evaluateTeamWeek(input: WeeklyEvaluationInput): WeeklyEvaluation {
   if (input.loaDays >= 3) return { recommendation: "LOA", reason: `Mit ${input.loaDays} genehmigten LoA-Tagen wird diese Woche neutral vermerkt.` };
-  if (input.rankBlocked) return { recommendation: "BLOCKED", reason: "Es besteht eine aktive Up-Rank-Sperre. In dieser Woche ist kein Up-Rank möglich." };
   if (input.actualMinutes >= input.requiredMinutes) {
+    if (input.rankBlocked) return { recommendation: "BLOCKED", reason: "Die Wochenzeit wurde erfüllt, aber es besteht eine aktive Up-Rank-Sperre. In dieser Woche ist kein Up-Rank möglich." };
     if (!input.nextRoleName) return { recommendation: "NO_ACTION", reason: "Die Wochenzeit wurde erfüllt; für diese Rolle ist kein weiterer Up-Rank hinterlegt." };
     return { recommendation: "UPRANK", reason: `Die Wochenzeit wurde erfüllt. Empfohlenes nächstes Team-Ranking: ${input.nextRoleName}.` };
   }

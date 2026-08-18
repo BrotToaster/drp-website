@@ -12,4 +12,11 @@ describe("Kalender und Zeitzonen", () => {
     expect(items).toHaveLength(4);
     expect(items[1].startsAt.toISOString()).toBe("2026-08-10T18:00:00.000Z");
   });
+
+  it("liefert auch Wiederholungen in einem vergangenen sichtbaren Zeitraum", () => {
+    const startsAt = new Date("2025-01-06T18:00:00.000Z");
+    const items = expandCalendarRevision({ id: "past", startsAt, endsAt: new Date("2025-01-06T20:00:00.000Z"), timeZone: "Europe/Berlin", recurrenceFrequency: "WEEKLY", recurrenceInterval: 1, recurrenceUntil: new Date("2025-02-01T00:00:00.000Z") }, new Date("2025-01-13T00:00:00.000Z"), new Date("2025-01-20T23:59:59.000Z"));
+    expect(items).toHaveLength(2);
+    expect(items[0].startsAt.toISOString()).toBe("2025-01-13T18:00:00.000Z");
+  });
 });

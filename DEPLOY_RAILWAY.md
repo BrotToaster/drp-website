@@ -31,16 +31,26 @@ NEXT_PUBLIC_ROBLOX_JOIN_URL=https://www.roblox.com/games/2534724415/Emergency-Re
 
 `DATABASE_URL` wird als Railway-Referenz eingetragen, nicht als öffentliches Datenbankpasswort. Nach Änderungen an OAuth-Variablen muss der Website-Service neu bereitgestellt werden.
 
-## 2. Migration v5 anwenden
+## 2. Datenbank sichern und Migrationen anwenden
+
+Vor dem Rollout im Railway-Dashboard ein aktuelles PostgreSQL-Backup beziehungsweise einen Volume-Snapshot erstellen. Erst fortfahren, wenn die Sicherung als erfolgreich angezeigt wird. Die v6-Migration ist rein additiv und bewahrt bestehende Weekly-Berichte in `reportText`.
 
 Im Website-Container:
 
 ```bash
 npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260818120000_portal_v5.sql
+npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260818130000_portal_v6.sql
 node prisma/seed.mjs
 ```
 
-Die Migration nur einmal ausführen. Anschließend die Website neu bereitstellen.
+Jede Migration nur einmal und in der angegebenen Reihenfolge ausführen. Wenn v5 bereits installiert ist, nur v6 und anschließend den Seed ausführen. Danach die Website neu bereitstellen.
+
+Nach dem ersten v6-Deploy im Admin-Panel unter **Melonly & Team**:
+
+1. die synchronisierten Discord-Ränge von `JM` bis zur letzten gewünschten Stufe konfigurieren,
+2. pro Rang Sektion, Kurzname, Position, Wochenziel und Folgerang festlegen,
+3. beim letzten Rang optional `Prüfungszulassung` als abweichende Ausgabe eintragen,
+4. Melonly-Mitglieder direkt mit Discord-Mitgliedern verknüpfen und angezeigte Konflikte auflösen.
 
 ## 3. Railway-Cronservice
 

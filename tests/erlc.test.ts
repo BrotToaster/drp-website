@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { transformPublicStatus } from "@/lib/erlc";
+import { isErlcStateStale, transformPublicStatus } from "@/lib/erlc";
 
 describe("öffentlicher ER:LC-Status", () => {
   it("gibt nur aggregierte Statuswerte zurück", () => {
@@ -22,5 +22,13 @@ describe("öffentlicher ER:LC-Status", () => {
       source: "demo",
     });
     expect(result).not.toHaveProperty("Players");
+  });
+});
+
+describe("ER:LC-Abgleichzeit", () => {
+  it("markiert einen mehr als zehn Minuten alten erfolgreichen Abgleich als veraltet", () => {
+    const now = new Date("2026-08-18T20:20:00.000Z").getTime();
+    expect(isErlcStateStale("2026-08-18T20:09:59.000Z", now)).toBe(true);
+    expect(isErlcStateStale("2026-08-18T20:15:00.000Z", now)).toBe(false);
   });
 });

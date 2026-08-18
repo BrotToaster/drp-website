@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormRuntimeProvider } from "@/components/form-runtime-context";
 import type { ActionResult } from "@/lib/action-result";
 import { initialActionResult } from "@/lib/action-result";
 
@@ -19,33 +20,42 @@ export function ReliableActionForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const handledState = useRef<ActionResult | null>(null);
-  const [refreshing, startRefresh] = useTransition();
-  const [state, formAction] = useActionState(action, initialActionResult);
+  const [visible, setVisible] = useState(false);
+  const [state, formAction, pending] = useActionState(action, initialActionResult);
   useEffect(() => {
     if (!state.message || handledState.current === state) return;
     handledState.current = state;
+    setVisible(true);
+    const hideToast = window.setTimeout(() => setVisible(false), state.ok ? 5500 : 9000);
     if (state.ok) {
       if (resetOnSuccess) formRef.current?.reset();
-      const navigateTo = (state.data as { navigateTo?: string } | undefined)?.navigateTo;
-      startRefresh(() => {
-        if (navigateTo) router.push(navigateTo);
-        else router.refresh();
-      });
+      const legacyTarget = (state.data as { navigateTo?: string } | undefined)?.navigateTo;
+      const target = state.target || legacyTarget;
+      if (target || state.refresh === "navigate") {
+        const mutationId = state.mutationId || crypto.randomUUID();
+        const url = new URL(target || window.location.href, window.location.href);
+        url.searchParams.set("saved", mutationId);
+        router.push(`${url.pathname}${url.search}${url.hash}`);
+        const watchdog = window.setTimeout(() => window.location.assign(url.toString()), 8000);
+        return () => { window.clearTimeout(watchdog); window.clearTimeout(hideToast); };
+      }
+      if (state.refresh !== "none") router.refresh();
     }
-  }, [state, resetOnSuccess, router, startRefresh]);
+    return () => window.clearTimeout(hideToast);
+  }, [state, resetOnSuccess, router]);
   return (
     <form ref={formRef} action={formAction} className={className} data-reliable-action="true">
-      <fieldset disabled={refreshing} className="contents">
-        {children}
-      </fieldset>
+      <FormRuntimeProvider>
+        <fieldset disabled={pending} className="contents">{children}</fieldset>
+      </FormRuntimeProvider>
       {state.message && (
         <p className={"rounded-xl px-4 py-3 text-sm " + (state.ok ? "bg-[#57c98c]/10 text-[#75d7a3]" : "bg-[#ef6f6c]/10 text-[#f28d8a]")} role={state.ok ? "status" : "alert"} aria-live="polite">
           {state.message}
         </p>
       )}
-      {state.message && (
+      {state.message && visible && (
         <div className={"mutation-toast " + (state.ok ? "mutation-toast-success" : "mutation-toast-error")} role={state.ok ? "status" : "alert"} aria-live="polite">
-          {refreshing ? "Ansicht wird aktualisiert …" : state.message}
+          {state.message}
         </div>
       )}
     </form>

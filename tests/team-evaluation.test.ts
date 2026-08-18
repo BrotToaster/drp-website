@@ -20,6 +20,11 @@ describe("DRP-Wochenauswertung", () => {
     expect(evaluateTeamWeek({ requiredMinutes: 180, actualMinutes: 0, loaDays: 0, activeStrikes: 2, rankBlocked: false }).recommendation).toBe("REMOVAL");
   });
 
+  it("wertet bei aktiver Sperre eine nicht erfüllte Zeit weiterhin als Strike", () => {
+    expect(evaluateTeamWeek({ requiredMinutes: 180, actualMinutes: 20, loaDays: 0, activeStrikes: 0, rankBlocked: true }).recommendation).toBe("STRIKE");
+    expect(evaluateTeamWeek({ requiredMinutes: 180, actualMinutes: 180, loaDays: 0, activeStrikes: 0, rankBlocked: true, nextRoleName: "M" }).recommendation).toBe("BLOCKED");
+  });
+
   it("erzeugt einen direkt kopierbaren Berichtstext", () => {
     const report = formatWeeklyReport({ weekStart: new Date("2026-08-03"), weekEnd: new Date("2026-08-09"), results: [{ displayName: "Beispiel", roleName: "Supporter", actualMinutes: 200, requiredMinutes: 180, recommendation: "UPRANK", reason: "Zeit erfüllt." }] });
     expect(report).toContain("DRP Team-Wochenauswertung");

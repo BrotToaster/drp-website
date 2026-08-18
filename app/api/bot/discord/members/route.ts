@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isBotAuthorized } from "@/lib/bot-auth";
 import { applyDiscordRoleMappings } from "@/lib/discord-sync";
+import { jsonRoleIds, resolveDiscordRank } from "@/lib/discord-ranks";
 import { prisma } from "@/lib/prisma";
 import { discordMemberSyncSchema } from "@/lib/validators";
 
@@ -18,8 +19,16 @@ export async function POST(request: Request) {
     const duplicate = await tx.botSyncReceipt.findUnique({ where: { externalId } });
     if (duplicate) return { duplicate: true, synced: 0, linked: 0 };
     let linked = 0;
+    let rankChanges = 0;
+    const rankConfiguration = await tx.discordTeamRank.findMany({
+      where: { active: true, discordRole: { guildId } },
+      include: { discordRole: true, nextDiscordRole: true },
+    });
 
     for (const member of members) {
+      const previousSnapshot = await tx.discordMemberSnapshot.findUnique({ where: { guildId_discordId: { guildId, discordId: member.id } } });
+      const previousRank = resolveDiscordRank(jsonRoleIds(previousSnapshot?.roleIds), rankConfiguration);
+      const currentRank = resolveDiscordRank(member.roleIds, rankConfiguration);
       await tx.discordMemberSnapshot.upsert({
         where: { guildId_discordId: { guildId, discordId: member.id } },
         update: {
@@ -38,6 +47,24 @@ export async function POST(request: Request) {
           roleIds: member.roleIds,
         },
       });
+      if (previousSnapshot && previousRank.rank?.discordRole.id !== currentRank.rank?.discordRole.id) {
+        await tx.discordRankHistory.create({
+          data: {
+            guildId,
+            discordId: member.id,
+            fromRoleId: previousRank.rank?.discordRole.id || null,
+            toRoleId: currentRank.rank?.discordRole.id || null,
+            fromLabel: previousRank.rank?.shortName || null,
+            toLabel: currentRank.rank?.shortName || null,
+            changedAt: new Date(),
+          },
+        });
+        rankChanges += 1;
+      }
+      const linkedMelonlyMembers = await tx.melonlyMember.findMany({ where: { discordId: member.id }, select: { id: true } });
+      if (linkedMelonlyMembers.length === 1) {
+        await tx.melonlyMember.update({ where: { id: linkedMelonlyMembers[0].id }, data: { displayName: member.displayName || member.username } });
+      }
       const user = await tx.user.findUnique({ where: { discordId: member.id } });
       if (user) {
         linked += 1;
@@ -61,10 +88,10 @@ export async function POST(request: Request) {
         action: "DISCORD_MEMBERS_SYNCED",
         entityType: "DiscordGuild",
         entityId: guildId,
-        metadata: { count: members.length, linked, externalId },
+        metadata: { count: members.length, linked, rankChanges, externalId },
       },
     });
-    return { duplicate: false, synced: members.length, linked };
+    return { duplicate: false, synced: members.length, linked, rankChanges };
   });
   return NextResponse.json(result);
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageIntro, SectionHeading } from "@/components/ui";
 import { getPublicServerStatus } from "@/lib/erlc";
 import { siteConfig } from "@/lib/site";
+import { RelativeTime } from "@/components/relative-time";
 
 export const metadata: Metadata = { title: "Server" };
 export const dynamic = "force-dynamic";
@@ -45,8 +46,9 @@ export default async function ServerPage() {
               />
             </div>
             <p className="mt-3 text-xs text-[#686e72]">
-              {status.source === "demo" ? "Lokale Demo-Daten" : "Live-Status · Aktualisierung alle 30 Sekunden"}
+              {status.source === "demo" ? "Lokale Demo-Daten" : "Automatischer Abgleich im Fünf-Minuten-Rhythmus"} · <RelativeTime value={status.lastSuccessfulAt} />
             </p>
+            {status.error && <p className="mt-2 text-xs text-[#f28d8a]"><RelativeTime value={status.checkedAt} prefix="Letzter Versuch" /> · {status.error}</p>}
           </div>
           <div className="surface p-7 md:p-10">
             <span className="eyebrow">Grundsätze</span>

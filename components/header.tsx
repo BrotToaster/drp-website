@@ -48,7 +48,7 @@ export async function Header() {
       </div>
       <nav
         aria-label="Mobile Navigation"
-        className="container-shell flex gap-1 overflow-x-auto pb-3 lg:hidden"
+        className="mobile-nav-scroll container-shell flex gap-1 overflow-x-auto pb-3 lg:hidden"
       >
         {siteConfig.navigation.map((item) => (
           <ActiveNavLink

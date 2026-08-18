@@ -38,6 +38,7 @@ const permissionDefinitions = [
   ["team_activity.view_self", "Eigene Teamaktivität anzeigen", "Team"],
   ["team_activity.view_all", "Teamaktivität aller Mitglieder anzeigen", "Team"],
   ["team_activity.review", "Wochenempfehlungen entscheiden", "Team"],
+  ["team_activity.configure", "Discord-Ränge und Weekly Insider konfigurieren", "Team"],
   ["melonly.manage", "Melonly-Integration verwalten", "Team"],
   ["erlc.check", "ER:LC-Status manuell prüfen", "Serverbetrieb"],
   ["erlc.details.view", "Sensible ER:LC-Details anzeigen", "Serverbetrieb"],

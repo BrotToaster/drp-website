@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { CinematicMapCard } from "@/components/cinematic-map-card";
 import { StatusPill } from "@/components/status-pill";
 import { NewsCard } from "@/components/news-card";
 import { RuleRotator } from "@/components/rule-rotator";
@@ -51,34 +51,7 @@ export default async function HomePage() {
 
           <div className="animate-in relative mx-auto w-full max-w-[480px]" style={{ animationDelay: "120ms" }}>
             <div className="absolute -inset-12 rounded-full bg-[#d6aa4c]/[0.06] blur-3xl" />
-            <div className="surface relative overflow-hidden p-5">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#777d81]">Live aus Liberty County</p>
-                  <p className="mt-1.5 text-sm font-semibold">{status.name}</p>
-                </div>
-                <span className="badge badge-gold">{status.source === "demo" ? "Demo Live" : "Live"}</span>
-              </div>
-              <div className="relative h-[310px] overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#0b0e11]">
-                <Image src={erlcMapUrl} alt="Offizielle Karte von Liberty County" fill sizes="(max-width: 1024px) 100vw, 480px" className="object-cover opacity-75" priority />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#080a0c] via-transparent to-[#080a0c]/20" />
-                <p className="absolute right-3 top-3 rounded-lg border border-white/[0.08] bg-black/65 px-2 py-1 text-[9px] text-[#b6babd] backdrop-blur">Offizielle ER:LC-Karte</p>
-                <div className="absolute bottom-4 left-4 right-4 grid grid-cols-3 gap-2">
-                  <div className="rounded-xl border border-white/[0.07] bg-[#0a0c0e]/90 p-3 backdrop-blur">
-                    <p className="text-[9px] uppercase tracking-wider text-[#777d81]">Spieler</p>
-                    <p className="mt-1 text-lg font-semibold">{status.players ?? "–"}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/[0.07] bg-[#0a0c0e]/90 p-3 backdrop-blur">
-                    <p className="text-[9px] uppercase tracking-wider text-[#777d81]">Slots</p>
-                    <p className="mt-1 text-lg font-semibold">{status.maxPlayers ?? "–"}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/[0.07] bg-[#0a0c0e]/90 p-3 backdrop-blur">
-                    <p className="text-[9px] uppercase tracking-wider text-[#777d81]">Queue</p>
-                    <p className="mt-1 text-lg font-semibold">{status.queue ?? "–"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CinematicMapCard mapUrl={erlcMapUrl} status={status} />
           </div>
         </div>
       </section>

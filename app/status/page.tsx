@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageIntro } from "@/components/ui";
 import { getPortalStatus, statusColor, statusLabels } from "@/lib/service-status";
 import { formatDateTime } from "@/lib/site";
+import { RelativeTime } from "@/components/relative-time";
 
 export const metadata: Metadata = { title: "Status" };
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function StatusPage() {
                 <div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.12em] text-[#777d81]">{service.source === "MANUAL" ? "DRP Dienst" : "Automatisch"}</p><h2 className="mt-2 text-xl font-semibold">{service.name}</h2></div><span className={"rounded-full border px-3 py-1 text-xs font-semibold " + statusColor(service.status)}>{statusLabels[service.status]}</span></div>
                 {service.description && <p className="mt-4 text-sm leading-6 text-[#8d9397]">{service.description}</p>}
                 {service.message && <p className="mt-4 rounded-xl bg-white/[0.035] p-3 text-sm text-[#b4b8bb]">{service.message}</p>}
-                <p className="mt-5 text-xs text-[#656b70]">{service.checkedAt ? "Geprüft " + formatDateTime(service.checkedAt) : "Noch nicht geprüft"}</p>
+                <p className="mt-5 text-xs text-[#656b70]"><RelativeTime value={service.checkedAt} prefix="Geprüft" /></p>
               </article>
             ))}
           </div>

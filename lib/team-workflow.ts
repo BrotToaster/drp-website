@@ -1,7 +1,9 @@
 import type { Prisma, WeeklyRecommendation } from "@prisma/client";
 import { localDateTimeToUtc } from "@/lib/calendar";
 import { prisma } from "@/lib/prisma";
-import { evaluateTeamWeek, formatWeeklyReport } from "@/lib/team-evaluation";
+import { evaluateTeamWeek } from "@/lib/team-evaluation";
+import { jsonRoleIds, resolveDiscordRank } from "@/lib/discord-ranks";
+import { formatWeeklyInsider, type WeeklyInsiderEntry } from "@/lib/weekly-insider";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,29 +40,76 @@ export async function generateWeeklyTeamReview(now = new Date()) {
   const members = await prisma.melonlyMember.findMany({
     where: { active: true },
     include: {
-      role: { include: { nextRole: true } },
       shifts: { where: { startsAt: { lt: rangeEnd }, OR: [{ endsAt: { gt: rangeStart } }, { endsAt: null }] } },
       leaves: { where: { approved: true, startsOn: { lte: weekEnd }, endsOn: { gte: weekStart } } },
       strikes: { where: { status: "ACTIVE", expiresAt: { gt: rangeStart } } },
       rankBlocks: { where: { startsAt: { lt: rangeEnd }, endsAt: { gt: rangeStart }, liftedAt: null } },
     },
   });
+  const ranks = await prisma.discordTeamRank.findMany({ where: { active: true }, include: { discordRole: true, nextDiscordRole: true }, orderBy: { sortOrder: "desc" } });
+  const discordIds = members.map((member) => member.discordId).filter((id): id is string => Boolean(id));
+  const [snapshots, recentRankChanges] = await Promise.all([
+    prisma.discordMemberSnapshot.findMany({ where: { discordId: { in: discordIds } }, orderBy: { lastSyncedAt: "desc" } }),
+    prisma.discordRankHistory.findMany({ where: { discordId: { in: discordIds }, changedAt: { gte: rangeStart, lt: rangeEnd } } }),
+  ]);
+  const duplicateIds = new Set(discordIds.filter((id, index) => discordIds.indexOf(id) !== index));
+  const snapshotByDiscord = new Map(snapshots.map((snapshot) => [snapshot.discordId, snapshot]));
+  const automaticEntries: WeeklyInsiderEntry[] = [];
+  const activityCandidates: Array<{ memberId: string; discordId: string; displayName: string; minutes: number; shifts: number }> = [];
   for (const member of members) {
     const actualMinutes = member.shifts.reduce((total, shift) => total + Math.max(0, shift.durationMinutes), 0);
     const loaDays = member.leaves.reduce((total, leave) => total + overlapDays(leave.startsOn, leave.endsOn, weekStart, weekEnd), 0);
-    const requiredMinutes = member.role?.weeklyTargetMinutes || 0;
-    const evaluation = evaluateTeamWeek({ requiredMinutes, actualMinutes, loaDays, activeStrikes: member.strikes.length, rankBlocked: member.rankBlocks.length > 0, nextRoleName: member.role?.nextRole?.name });
+    const snapshot = member.discordId ? snapshotByDiscord.get(member.discordId) : null;
+    const resolved = resolveDiscordRank(jsonRoleIds(snapshot?.roleIds), ranks);
+    const rank = duplicateIds.has(member.discordId || "") ? null : resolved.rank;
+    const nextConfiguredRank = rank?.nextDiscordRole ? ranks.find((candidate) => candidate.discordRole.id === rank.nextDiscordRole?.id) : null;
+    const nextRoleName = rank?.outputLabel || nextConfiguredRank?.shortName || rank?.nextDiscordRole?.name || null;
+    const requiredMinutes = rank?.weeklyTargetMinutes || 0;
+    let evaluation = evaluateTeamWeek({ requiredMinutes, actualMinutes, loaDays, activeStrikes: member.strikes.length, rankBlocked: member.rankBlocks.length > 0, nextRoleName });
+    if (!member.discordId || !snapshot || !rank) {
+      evaluation = { recommendation: "NO_ACTION", reason: duplicateIds.has(member.discordId || "") ? "Discord-Zuordnung ist doppelt und muss geprüft werden." : "Kein eindeutig konfigurierter Discord-Teamrang gefunden." };
+    } else if (evaluation.recommendation === "UPRANK" && recentRankChanges.some((change) => change.discordId === member.discordId)) {
+      evaluation = { recommendation: "NO_ACTION", reason: "In dieser Woche wurde bereits ein Discord-Rangwechsel erkannt." };
+    }
+    if (member.discordId && snapshot && rank && !duplicateIds.has(member.discordId)) activityCandidates.push({ memberId: member.id, discordId: member.discordId, displayName: snapshot.displayName || snapshot.username, minutes: actualMinutes, shifts: member.shifts.length });
     const existing = await prisma.teamWeeklyResult.findUnique({ where: { reviewId_memberId: { reviewId: review.id, memberId: member.id } } });
     if (!existing) {
       await prisma.teamWeeklyResult.create({ data: { reviewId: review.id, memberId: member.id, requiredMinutes, actualMinutes, loaDays, activeStrikesBefore: member.strikes.length, recommendation: evaluation.recommendation, reason: evaluation.reason } });
     } else if (existing.decision === "PENDING") {
       await prisma.teamWeeklyResult.update({ where: { id: existing.id }, data: { requiredMinutes, actualMinutes, loaDays, activeStrikesBefore: member.strikes.length, recommendation: evaluation.recommendation, reason: evaluation.reason } });
     }
+    if (!member.discordId || !rank || evaluation.recommendation === "NO_ACTION") continue;
+    if (evaluation.recommendation === "UPRANK") {
+      automaticEntries.push({ kind: "UPRANK", section: rank.section, discordId: member.discordId, displayName: snapshot?.displayName || snapshot?.username || member.displayName, fromLabel: rank.shortName, toLabel: nextRoleName, sortOrder: rank.sortOrder, included: true });
+    } else if (evaluation.recommendation === "LOA") {
+      automaticEntries.push({ kind: "LOA", section: "LOA", discordId: member.discordId, displayName: snapshot?.displayName || snapshot?.username || member.displayName, fromLabel: rank.shortName, text: `${rank.shortName} (LoA)`, included: true });
+    } else if (["STRIKE", "REMOVAL", "BLOCKED"].includes(evaluation.recommendation)) {
+      const strikeNumber = evaluation.recommendation === "REMOVAL" ? 3 : Math.min(3, member.strikes.length + (evaluation.recommendation === "STRIKE" ? 1 : 0));
+      const suffix = evaluation.recommendation === "REMOVAL" ? " – Teamentfernung" : strikeNumber === 2 ? " -> Upranksperre" : "";
+      const text = evaluation.recommendation === "BLOCKED" ? `${rank.shortName} (Up-Rank-Sperre)` : `${rank.shortName} (Strike ${strikeNumber}/3)${suffix}`;
+      automaticEntries.push({ kind: evaluation.recommendation, section: "STRIKES", discordId: member.discordId, displayName: snapshot?.displayName || snapshot?.username || member.displayName, fromLabel: rank.shortName, text, included: true });
+    }
   }
-  const results = await prisma.teamWeeklyResult.findMany({ where: { reviewId: review.id }, include: { member: { include: { role: true } } }, orderBy: { member: { displayName: "asc" } } });
-  const reportText = formatWeeklyReport({ weekStart, weekEnd, results: results.map((result) => ({ displayName: result.member.displayName, roleName: result.member.role?.name, actualMinutes: result.actualMinutes, requiredMinutes: result.requiredMinutes, recommendation: result.recommendation, reason: result.reason })) });
-  await prisma.teamWeeklyReview.update({ where: { id: review.id }, data: { reportText } });
+  activityCandidates.sort((a, b) => b.minutes - a.minutes || b.shifts - a.shifts || a.displayName.localeCompare(b.displayName, "de"));
+  const mostActive = activityCandidates[0] || null;
+  await prisma.teamWeeklyEntry.deleteMany({ where: { reviewId: review.id, automatic: true } });
+  if (automaticEntries.length) await prisma.teamWeeklyEntry.createMany({ data: automaticEntries.map((entry, index) => ({ reviewId: review.id, memberId: members.find((member) => member.discordId === entry.discordId)?.id, kind: entry.kind, section: entry.section, discordId: entry.discordId, displayName: entry.displayName, fromLabel: entry.fromLabel, toLabel: entry.toLabel, text: entry.text, sortOrder: entry.sortOrder ?? index, automatic: true, included: true })) });
+  const [entries, signatures, results] = await Promise.all([
+    prisma.teamWeeklyEntry.findMany({ where: { reviewId: review.id }, orderBy: { sortOrder: "asc" } }),
+    prisma.teamWeeklySignature.findMany({ where: { reviewId: review.id }, orderBy: { sortOrder: "asc" } }),
+    prisma.teamWeeklyResult.findMany({ where: { reviewId: review.id }, include: { member: true }, orderBy: { member: { displayName: "asc" } } }),
+  ]);
+  const reportText = formatWeeklyInsider({ mentionMode: review.mentionMode === "PING" ? "PING" : "CODE", mostActiveDiscordId: mostActive?.discordId, mostActiveDisplayName: mostActive?.displayName, entries, signatures });
+  await prisma.teamWeeklyReview.update({ where: { id: review.id }, data: { reportText, generatedAt: now, mostActiveMemberId: mostActive?.memberId || null, mostActiveDiscordId: mostActive?.discordId || null, mostActiveDisplayName: mostActive?.displayName || null } });
   return { reviewId: review.id, weekStart, weekEnd, reportText, count: results.length };
+}
+
+export async function rebuildWeeklyReport(reviewId: string) {
+  const review = await prisma.teamWeeklyReview.findUnique({ where: { id: reviewId }, include: { entries: { orderBy: { sortOrder: "asc" } }, signatures: { orderBy: { sortOrder: "asc" } } } });
+  if (!review) throw new Error("Wochenauswertung wurde nicht gefunden.");
+  const reportText = formatWeeklyInsider({ mentionMode: review.mentionMode === "PING" ? "PING" : "CODE", mostActiveDiscordId: review.mostActiveDiscordId, mostActiveDisplayName: review.mostActiveDisplayName, entries: review.entries, signatures: review.signatures });
+  await prisma.teamWeeklyReview.update({ where: { id: review.id }, data: { reportText } });
+  return reportText;
 }
 
 async function queueMappedRole(tx: Prisma.TransactionClient, input: { mappingKey: string; memberId: string; discordId: string; operation: "ADD" | "REMOVE"; dedupeSuffix: string }) {
