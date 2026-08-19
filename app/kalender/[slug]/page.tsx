@@ -33,7 +33,7 @@ export default async function CalendarDetailPage({ params }: { params: Promise<{
     </header>
     <div className="container-shell max-w-5xl py-14 md:py-20">
       {revision.coverImage && <Image src={revision.coverImage.secureUrl} alt={`Titelbild zu ${revision.title}`} width={1600} height={900} sizes="(max-width: 1024px) 100vw, 1024px" className="mb-12 max-h-[560px] w-full rounded-[22px] border border-white/[0.1] object-cover" />}
-      <div className="mx-auto max-w-3xl"><RichContent content={content.data} />{revision.externalUrl && <a href={revision.externalUrl} target="_blank" rel="noreferrer" className="button button-primary mt-8">Weitere Informationen ↗</a>}<MediaGallery media={media} /></div>
+      <div className="content-surface mx-auto max-w-3xl"><RichContent content={content.data} />{revision.externalUrl && <a href={revision.externalUrl} target="_blank" rel="noreferrer" className="button button-primary mt-8">Weitere Informationen ↗</a>}<MediaGallery media={media} /></div>
     </div>
   </article>;
 }

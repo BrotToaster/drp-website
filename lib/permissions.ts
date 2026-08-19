@@ -28,6 +28,7 @@ export type CalendarAccess = {
 
 export type AuthorizationContext = {
   userId: string;
+  roleIds: string[];
   roleNames: string[];
   primaryRole: string;
   permissions: PermissionKey[];
@@ -35,6 +36,12 @@ export type AuthorizationContext = {
   documentAccess: DocumentAccess[];
   calendarAccess: CalendarAccess[];
   isOwner: boolean;
+};
+
+export type InternalDocumentAuthorization = {
+  categoryId: string;
+  accessMode: "CATEGORY" | "RESTRICTED";
+  roleAccess?: { roleId: string; canView: boolean }[];
 };
 
 export function hasPermission(
@@ -53,6 +60,16 @@ export function canAccessDocumentCategory(
   return context.documentAccess.some(
     (access) => access.categoryId === categoryId && access[ability],
   );
+}
+
+export function canViewInternalDocument(
+  context: AuthorizationContext,
+  document: InternalDocumentAuthorization,
+) {
+  if (context.isOwner) return true;
+  if (!canAccessDocumentCategory(context, document.categoryId, "canView")) return false;
+  if (document.accessMode === "CATEGORY") return true;
+  return Boolean(document.roleAccess?.some((access) => access.canView && context.roleIds.includes(access.roleId)));
 }
 
 export function canAccessCalendarCategory(
@@ -75,24 +92,6 @@ export function canAccessTicketCategory(
   return context.ticketAccess.some(
     (access) => access.categoryId === categoryId && access[ability],
   );
-}
-
-export type LegacyRole = "PLAYER" | "SUPPORTER" | "MODERATOR" | "ADMIN" | "OWNER";
-
-const legacyRoleRank: Record<LegacyRole, number> = {
-  PLAYER: 0,
-  SUPPORTER: 1,
-  MODERATOR: 2,
-  ADMIN: 3,
-  OWNER: 4,
-};
-
-export function hasMinimumRole(current: LegacyRole, required: LegacyRole) {
-  return legacyRoleRank[current] >= legacyRoleRank[required];
-}
-
-export function isStaff(role: LegacyRole) {
-  return hasMinimumRole(role, "SUPPORTER");
 }
 
 const ticketTransitions: Record<TicketStatus, TicketStatus[]> = {

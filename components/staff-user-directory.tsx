@@ -104,7 +104,7 @@ export async function StaffUserDirectory({
               {editable && (
                 <>
                   <div className="flex flex-wrap gap-3">
-                    {roles.filter((role) => role.key !== "OWNER" && role.key !== "PLAYER").map((role) => (
+                    {roles.filter((role) => role.key !== "OWNER").map((role) => (
                       <label key={role.id} className="flex items-center gap-2 text-xs">
                         <input type="checkbox" name="roleIds" value={role.id} defaultChecked={manualIds.has(role.id)} />
                         {role.name}

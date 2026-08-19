@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { archiveInternalDocumentAction, restoreDocumentRevisionAction, saveInternalDocumentAction } from "@/app/actions/documents";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { MediaUploader } from "@/components/media-uploader";
+import { InternalWorkbookViewer } from "@/components/internal-workbook-viewer";
 import { PortalShell } from "@/components/portal-shell";
 import { ReliableActionForm } from "@/components/reliable-action-form";
 import { RichContent } from "@/components/rich-content";
@@ -10,7 +11,8 @@ import { RichTextEditor } from "@/components/rich-text-editor";
 import { SubmitButton } from "@/components/submit-button";
 import { requirePermission } from "@/lib/authz";
 import { contentNodeSchema, emptyContent } from "@/lib/content";
-import { canAccessDocumentCategory } from "@/lib/permissions";
+import { canAccessDocumentCategory, canViewInternalDocument } from "@/lib/permissions";
+import { asWorkbookSnapshot } from "@/lib/internal-document-import";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/site";
 
@@ -22,9 +24,9 @@ export default async function InternalDocumentPage({ params }: { params: Promise
   const { slug } = await params;
   const document = await prisma.internalDocument.findUnique({
     where: { slug },
-    include: { category: true, revisions: { include: { editor: { select: { name: true } }, media: { include: { media: true }, orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } } },
+    include: { category: true, roleAccess: true, revisions: { include: { editor: { select: { name: true } }, media: { include: { media: true }, orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } } },
   });
-  if (!document || !canAccessDocumentCategory(authorization, document.categoryId, "canView")) notFound();
+  if (!document || !canViewInternalDocument(authorization, document)) notFound();
   const latest = document.revisions[0];
   if (!latest) notFound();
   const parsed = contentNodeSchema.safeParse(latest.content);
@@ -33,10 +35,12 @@ export default async function InternalDocumentPage({ params }: { params: Promise
   const canManage = canAccessDocumentCategory(authorization, document.categoryId, "canManage");
   const categories = canEdit ? await prisma.internalDocumentCategory.findMany({ where: { visible: true }, orderBy: { sortOrder: "asc" } }) : [];
   const assets = latest.media.map((item) => ({ id: item.media.id, url: `/api/media/internal/${item.media.id}`, kind: item.media.kind, name: item.media.originalName, caption: item.caption }));
+  const workbook = asWorkbookSnapshot(latest.structuredData);
 
   return <PortalShell authorization={authorization} title={document.title} description={`${document.category.title} · Version ${latest.version} · ${formatDateTime(latest.createdAt)}`} section="staff">
     {document.archivedAt && <p className="mb-5 rounded-xl bg-[#efc76e]/10 p-4 text-sm text-[#efc76e]">Dieses Dokument ist archiviert.</p>}
-    <article className="surface p-6 md:p-8"><RichContent content={content} />
+    <article className="content-surface"><RichContent content={content} />
+      {workbook && <InternalWorkbookViewer workbook={workbook} />}
       {assets.length > 0 && <section className="mt-10 border-t border-white/[0.07] pt-6"><h2 className="text-lg font-semibold">Geschützte Anhänge</h2><div className="mt-4 grid gap-3">{assets.map((asset) => <a key={asset.id} href={asset.url} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-xl border border-white/[0.08] p-4 hover:border-[#d6aa4c]/35"><span><strong className="text-sm">{asset.caption || asset.name}</strong><span className="ml-2 text-xs text-[#777d81]">{asset.kind}</span></span><span className="text-[#efc76e]">Öffnen ↗</span></a>)}</div></section>}
     </article>
 

@@ -11,7 +11,7 @@ export default async function TicketAdminPage() {
   const [categories, roles] = await Promise.all([
     prisma.ticketCategory.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.accessRole.findMany({
-      where: { key: { not: "PLAYER" } },
+      where: { key: { not: "OWNER" } },
       orderBy: { priority: "desc" },
       include: { ticketAccesses: true },
     }),

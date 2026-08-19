@@ -25,6 +25,11 @@ const schema = z.object({
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const audioTypes = new Set(["audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4"]);
 const videoTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+const documentTypes = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
     hasPermission(authorization, "team.manage") ||
     hasPermission(authorization, "site.manage") ||
     authorization.calendarAccess.some((access) => access.canCreate || access.canManage);
-  const canEditInternal = hasPermission(authorization, "documents.access") && authorization.documentAccess.some((access) => access.canCreate || access.canEdit || access.canManage);
+  const canEditInternal = hasPermission(authorization, "documents.access") && (authorization.isOwner || authorization.documentAccess.some((access) => access.canCreate || access.canEdit || access.canManage));
   if (
     !canEditPublic && !canEditInternal
   ) {
@@ -64,7 +69,7 @@ export async function POST(request: Request) {
   if (secureUrl.hostname !== expectedHost || (internal ? !secureUrl.pathname.includes("/authenticated/") : !secureUrl.pathname.includes("/upload/"))) {
     return NextResponse.json({ error: "Ungültige Medien-URL." }, { status: 400 });
   }
-  const expectedKind = imageTypes.has(data.mimeType) ? "IMAGE" : audioTypes.has(data.mimeType) ? "AUDIO" : videoTypes.has(data.mimeType) ? "VIDEO" : internal && data.mimeType === "application/pdf" ? "DOCUMENT" : null;
+  const expectedKind = imageTypes.has(data.mimeType) ? "IMAGE" : audioTypes.has(data.mimeType) ? "AUDIO" : videoTypes.has(data.mimeType) ? "VIDEO" : internal && documentTypes.has(data.mimeType) ? "DOCUMENT" : null;
   const expectedResourceType = expectedKind === "IMAGE" ? "image" : expectedKind === "DOCUMENT" ? "raw" : expectedKind ? "video" : null;
   if (!expectedKind || data.kind !== expectedKind || data.resourceType !== expectedResourceType) {
     return NextResponse.json({ error: "Medientyp stimmt nicht mit dem Upload überein." }, { status: 400 });

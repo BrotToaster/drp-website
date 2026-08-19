@@ -59,8 +59,9 @@ export async function getAuthorizationContext(userId: string): Promise<Authoriza
   if (!user) {
     return {
       userId,
+      roleIds: [],
       roleNames: [],
-      primaryRole: "Player",
+      primaryRole: "Mitglied",
       permissions: [],
       ticketAccess: [],
       documentAccess: [],
@@ -119,8 +120,9 @@ export async function getAuthorizationContext(userId: string): Promise<Authoriza
   );
   return {
     userId,
+    roleIds: Array.from(new Set(user.roleAssignments.map((assignment) => assignment.roleId))),
     roleNames,
-    primaryRole: roleNames[0] || "Player",
+    primaryRole: roleNames[0] || "Mitglied",
     permissions: Array.from(permissionSet),
     ticketAccess: Array.from(categoryAccess.values()),
     documentAccess: Array.from(documentAccess.values()),

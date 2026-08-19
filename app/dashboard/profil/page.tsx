@@ -118,7 +118,7 @@ export default async function ProfilePage() {
             </div>
             <div className="min-w-0">
               <p className="truncate font-semibold">{profile?.name || user.name}</p>
-              <p className="mt-1 truncate text-xs text-[#777d81]">{authorization.roleNames.join(", ") || "Player"}</p>
+              <p className="mt-1 truncate text-xs text-[#777d81]">{authorization.roleNames.join(", ") || "Mitglied"}</p>
             </div>
           </div>
           <div className="divider my-6" />

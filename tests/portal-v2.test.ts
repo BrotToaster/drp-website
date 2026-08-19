@@ -4,14 +4,14 @@ import fixture from "@/data/rules.fixture.json";
 import { isNavigationActive } from "@/lib/navigation";
 
 const EXPECTED_RULE_CHECKSUM =
-  "cc513127182db3d2256a85a25e9619e512217528703bc534d0ff61c5d78754f5";
+  "d3b73b98e067414926187ad9665f7203809b1a9d21f935a8119173d2aae9e8a1";
 
 describe("Regelwerk-Fixture", () => {
   it("enthält die geprüfte wortgetreue Fassung", () => {
     const checksum = createHash("sha256")
       .update(JSON.stringify(fixture.rules))
       .digest("hex");
-    expect(fixture.rules).toHaveLength(60);
+    expect(fixture.rules).toHaveLength(117);
     expect(fixture.checksum).toBe(EXPECTED_RULE_CHECKSUM);
     expect(checksum).toBe(EXPECTED_RULE_CHECKSUM);
   });

@@ -44,6 +44,26 @@ function renderNode(node: JSONContent, key: number | string): ReactNode {
       return <li key={key}>{children}</li>;
     case "blockquote":
       return <blockquote key={key}>{children}</blockquote>;
+    case "codeBlock":
+      return (
+        <div className="rich-code-scroll" key={key} tabIndex={0}>
+          <pre>
+            <code>{children}</code>
+          </pre>
+        </div>
+      );
+    case "table":
+      return (
+        <div className="rich-table-scroll" key={key} tabIndex={0}>
+          <table>{children}</table>
+        </div>
+      );
+    case "tableRow":
+      return <tr key={key}>{children}</tr>;
+    case "tableHeader":
+      return <th key={key}>{children}</th>;
+    case "tableCell":
+      return <td key={key}>{children}</td>;
     case "hardBreak":
       return <br key={key} />;
     case "horizontalRule":
@@ -61,5 +81,5 @@ function renderNode(node: JSONContent, key: number | string): ReactNode {
 }
 
 export function RichContent({ content }: { content: JSONContent }) {
-  return <div className="rich-content">{renderNode(content, "root")}</div>;
+  return <div className="rich-content text-safe">{renderNode(content, "root")}</div>;
 }

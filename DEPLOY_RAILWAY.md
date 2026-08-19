@@ -45,17 +45,19 @@ Nach jedem Deployment zeigt `https://drpg.up.railway.app/api/health` den aktuell
 
 ## 2. Datenbank sichern und Migrationen anwenden
 
-Vor dem Rollout im Railway-Dashboard ein aktuelles PostgreSQL-Backup beziehungsweise einen Volume-Snapshot erstellen. Erst fortfahren, wenn die Sicherung als erfolgreich angezeigt wird. Die v6-Migration ist rein additiv und bewahrt bestehende Weekly-Berichte in `reportText`.
+Vor dem Rollout im Railway-Dashboard ein aktuelles PostgreSQL-Backup beziehungsweise einen Volume-Snapshot erstellen. Erst fortfahren, wenn die Sicherung als erfolgreich angezeigt wird. Die v7-Migration ist additiv; vorhandene Dokumente, Rollen und Regelbestätigungen bleiben erhalten. Nur tatsächlich geänderte Regeln erhalten durch die anschließende Fixture-Migration eine neue Version.
 
 Im Website-Container:
 
 ```bash
 npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260818120000_portal_v5.sql
 npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260818130000_portal_v6.sql
+npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260819120000_portal_v7.sql
+npx prisma db execute --schema prisma/schema.prisma --file netlify/database/migrations/20260819120100_rule_fixture_v7.sql
 node prisma/seed.mjs
 ```
 
-Jede Migration nur einmal und in der angegebenen Reihenfolge ausführen. Wenn v5 bereits installiert ist, nur v6 und anschließend den Seed ausführen. Danach die Website neu bereitstellen.
+Jede Migration nur einmal und in der angegebenen Reihenfolge ausführen. Bereits erfolgreich angewendete Dateien werden übersprungen. Danach die Website neu bereitstellen.
 
 Nach dem ersten v6-Deploy im Admin-Panel unter **Melonly & Team**:
 
@@ -63,6 +65,16 @@ Nach dem ersten v6-Deploy im Admin-Panel unter **Melonly & Team**:
 2. pro Rang Sektion, Kurzname, Position, Wochenziel und Folgerang festlegen,
 3. beim letzten Rang optional `Prüfungszulassung` als abweichende Ausgabe eintragen,
 4. Melonly-Mitglieder direkt mit Discord-Mitgliedern verknüpfen und angezeigte Konflikte auflösen.
+
+Nach dem ersten v7-Deploy im Admin-Panel unter **Dokumente & Zugriffe**:
+
+1. `Team-Regelwerk`, `User Liste`, `Zwischen Prüfung` und `Junior Moderator Prüfung` direkt importieren,
+2. `Strafen Katalog` als XLSX und `Test Administrator Prüfung` als DOCX hochladen und importieren,
+3. kontrollieren, dass das Team-Regelwerk und die fünf ausgelagerten Protokolle vorhanden sind,
+4. pro Dokument den Modus **Eingeschränkt** beibehalten und die erlaubten Website-Rollen setzen,
+5. erst nach der Kontrolle die ursprünglichen Google-Dateien auf **Eingeschränkt** stellen.
+
+Neue Importe sind absichtlich zunächst ausschließlich für Owner sichtbar. Die Google-Originale müssen bis zum erfolgreichen Import erreichbar bleiben; die Website-Freigabe schützt keinen weiterhin öffentlich geteilten Google-Link.
 
 ## 3. Railway-Cronservice
 

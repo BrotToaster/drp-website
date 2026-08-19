@@ -41,9 +41,16 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
             <img src={post.thumbnailUrl} alt={"Titelbild zu " + post.title} className="max-h-[560px] w-full rounded-[22px] border border-white/[0.1] object-cover shadow-2xl shadow-black/30" />
           </div>
         )}
-        <div className="mx-auto max-w-3xl py-14 md:py-20">
-          <RichContent content={post.content} />
-          <MediaGallery media={post.media} />
+        <div className="mx-auto max-w-4xl py-14 md:py-20">
+          <section className="content-surface" aria-label="Beitragsinhalt">
+            <RichContent content={post.content} />
+          </section>
+          {post.media.length > 0 && (
+            <section className="content-surface mt-6" aria-label="Medien zum Beitrag">
+              <h2 className="text-lg font-semibold">Medien</h2>
+              <MediaGallery media={post.media} />
+            </section>
+          )}
         </div>
       </div>
     </article>

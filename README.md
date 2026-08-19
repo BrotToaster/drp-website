@@ -12,6 +12,7 @@ Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und
 - FullCalendar mit Tages-, Wochen-, Monats-, Jahres- und Agendaansicht
 - kombinierbare Datenbankrollen mit Discord-Synchronisierung
 - strukturierter Weekly Insider aus Discord-Rängen und Melonly-Zeiten
+- geschützte, versionierte interne Dokumente mit Rollenfreigaben sowie Google-Docs-, Google-Sheets-, DOCX- und XLSX-Import
 
 ## Lokal starten
 
@@ -38,13 +39,12 @@ Danach ist die Website unter http://localhost:3000 erreichbar. Docker wird nicht
 
 Die aktuelle Anleitung steht in [DEPLOY_RAILWAY.md](./DEPLOY_RAILWAY.md). Die bisherige Netlify-Anleitung bleibt für einen einfachen Rückwechsel erhalten. Vor dem ersten Produktionsdeploy müssen alle Werte aus `.env.example` als Umgebungsvariablen hinterlegt werden. Geheimnisse gehören niemals in Git.
 
-Migrationen liegen unter netlify/database/migrations. Die Portal-v2-Migration:
+Migrationen liegen unter `netlify/database/migrations`. Portal v7 ergänzt:
 
-- überführt bestehende feste Rollen in kombinierbare Rollen,
-- führt TECHNICAL und CONTACT als Ticketkategorien ein,
-- entfernt Bewerbungen und Sanktionen,
-- erstellt versionierte Regeln/News und Medien,
-- importiert 60 Regeln aus dem bestehenden DRP-Regelwerk.
+- frei löschbare Rollen mit geschützter Owner-Rolle und konfigurierbarer Standardrolle,
+- dokumentbezogene Rollenfreigaben und versionierte Importmetadaten,
+- geschützte Tabellenkopien aus Google Sheets oder XLSX,
+- das aktualisierte öffentliche Regelwerk mit 117 Regeln aus sieben Bereichen.
 
 ## Discord-Bot
 
@@ -112,7 +112,7 @@ node scripts/import-rule-source.mjs
 node scripts/generate-rule-migration.mjs
 ~~~
 
-Die Fixture enthält eine SHA-256-Prüfsumme, die durch Tests abgesichert wird.
+Ohne Quellordner lädt der Importer die sieben öffentlichen Google-Sites-Seiten direkt. Alternativ kann als erstes Argument ein Ordner mit `main.html`, `discord.html`, `event.html`, `faction.html`, `main-factions.html`, `legal-factions.html` und `illegal-factions.html` angegeben werden. Die Fixture enthält eine SHA-256-Prüfsumme, die durch Tests abgesichert wird.
 
 ## Qualität
 

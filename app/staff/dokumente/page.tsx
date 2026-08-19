@@ -27,6 +27,10 @@ export default async function StaffDocumentsPage({ searchParams }: { searchParam
   const documents = await prisma.internalDocument.findMany({
     where: {
       categoryId: { in: categories.map((category) => category.id) },
+      ...(authorization.isOwner ? {} : { OR: [
+        { accessMode: "CATEGORY" as const },
+        { accessMode: "RESTRICTED" as const, roleAccess: { some: { roleId: { in: authorization.roleIds }, canView: true } } },
+      ] }),
       ...(query.category ? { category: { slug: query.category } } : {}),
       ...(query.archived === "1" ? { archivedAt: { not: null } } : { archivedAt: null }),
     },
@@ -54,7 +58,7 @@ export default async function StaffDocumentsPage({ searchParams }: { searchParam
       </form>
       <div className="mb-4 flex gap-2 text-xs"><Link className={!query.archived ? "badge badge-gold" : "badge"} href="/staff/dokumente">Aktiv</Link><Link className={query.archived === "1" ? "badge badge-gold" : "badge"} href="/staff/dokumente?archived=1">Archiv</Link></div>
       <div className="grid gap-4 md:grid-cols-2">
-        {filtered.map((document) => <Link key={document.id} href={`/staff/dokumente/${document.slug}`} className="surface surface-interactive p-6"><div className="flex items-center justify-between gap-3"><span className="badge badge-gold">{document.category.title}</span><span className="text-xs text-[#6f7579]">Version {document.revisions[0]?.version || 0}</span></div><h2 className="mt-5 text-xl font-semibold">{document.title}</h2><p className="mt-2 line-clamp-3 text-sm leading-6 text-[#8d9397]">{document.summary || "Keine Kurzbeschreibung vorhanden."}</p><p className="mt-5 text-xs text-[#656b70]">Aktualisiert {formatDateTime(document.updatedAt)}</p></Link>)}
+        {filtered.map((document) => <Link key={document.id} href={`/staff/dokumente/${document.slug}`} className="surface surface-interactive min-w-0 p-6"><div className="flex items-center justify-between gap-3"><span className="badge badge-gold">{document.category.title}</span><span className="text-xs text-[#6f7579]">Version {document.revisions[0]?.version || 0}</span></div><h2 className="mt-5 break-words text-xl font-semibold">{document.title}</h2><p className="mt-2 line-clamp-3 break-words text-sm leading-6 text-[#8d9397]">{document.summary || "Keine Kurzbeschreibung vorhanden."}</p><p className="mt-5 text-xs text-[#656b70]">Aktualisiert {formatDateTime(document.updatedAt)}</p></Link>)}
         {!filtered.length && <div className="surface p-8 text-sm text-[#8d9397] md:col-span-2">Keine passenden Dokumente gefunden.</div>}
       </div>
     </PortalShell>

@@ -31,6 +31,24 @@ enum MediaVisibility {
   INTERNAL
 }
 
+enum InternalDocumentAccessMode {
+  CATEGORY
+  RESTRICTED
+}
+
+enum InternalDocumentSourceType {
+  GOOGLE_DOCS
+  GOOGLE_SHEETS
+  UPLOAD_DOCX
+  UPLOAD_XLSX
+}
+
+enum InternalDocumentImportStatus {
+  NEVER
+  SUCCEEDED
+  FAILED
+}
+
 enum CalendarEventStatus {
   DRAFT
   PENDING_REVIEW
@@ -200,6 +218,7 @@ model AccessRole {
   discordMappings  DiscordRoleMapping[]
   ticketAccesses   RoleTicketCategoryAccess[]
   documentAccesses RoleDocumentCategoryAccess[]
+  documentGrants   InternalDocumentRoleAccess[]
   calendarAccesses RoleCalendarCategoryAccess[]
 }
 
@@ -240,21 +259,21 @@ model UserRoleAssignment {
 }
 
 model DiscordRole {
-  id            String                   @id @default(cuid())
-  guildId       String
-  discordRoleId String
-  name          String
-  color         String?
-  position      Int                      @default(0)
-  managed       Boolean                  @default(false)
-  lastSyncedAt  DateTime                 @default(now())
-  mappings      DiscordRoleMapping[]
-  teamMappings  DiscordTeamRoleMapping[]
-  roleJobs      DiscordRoleJob[]
-  teamRank      DiscordTeamRank?          @relation("DiscordTeamRankRole")
-  previousRanks DiscordTeamRank[]         @relation("DiscordTeamRankNextRole")
-  rankHistoryFrom DiscordRankHistory[]    @relation("DiscordRankHistoryFrom")
-  rankHistoryTo   DiscordRankHistory[]    @relation("DiscordRankHistoryTo")
+  id              String                   @id @default(cuid())
+  guildId         String
+  discordRoleId   String
+  name            String
+  color           String?
+  position        Int                      @default(0)
+  managed         Boolean                  @default(false)
+  lastSyncedAt    DateTime                 @default(now())
+  mappings        DiscordRoleMapping[]
+  teamMappings    DiscordTeamRoleMapping[]
+  roleJobs        DiscordRoleJob[]
+  teamRank        DiscordTeamRank?         @relation("DiscordTeamRankRole")
+  previousRanks   DiscordTeamRank[]        @relation("DiscordTeamRankNextRole")
+  rankHistoryFrom DiscordRankHistory[]     @relation("DiscordRankHistoryFrom")
+  rankHistoryTo   DiscordRankHistory[]     @relation("DiscordRankHistoryTo")
 
   @@unique([guildId, discordRoleId])
   @@index([guildId, position])
@@ -582,33 +601,57 @@ model RoleDocumentCategoryAccess {
 }
 
 model InternalDocument {
-  id         String                     @id @default(cuid())
-  categoryId String
-  slug       String                     @unique
-  title      String
-  summary    String?
-  creatorId  String?
-  archivedAt DateTime?
-  createdAt  DateTime                   @default(now())
-  updatedAt  DateTime                   @updatedAt
-  category   InternalDocumentCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  creator    User?                      @relation("InternalDocumentCreator", fields: [creatorId], references: [id], onDelete: SetNull)
-  revisions  InternalDocumentRevision[]
+  id                 String                       @id @default(cuid())
+  categoryId         String
+  slug               String                       @unique
+  title              String
+  summary            String?
+  creatorId          String?
+  accessMode         InternalDocumentAccessMode   @default(CATEGORY)
+  sourceType         InternalDocumentSourceType?
+  sourceExternalId   String?
+  sourceUrl          String?
+  sourceChecksum     String?
+  sourceImportedAt   DateTime?
+  sourceImportStatus InternalDocumentImportStatus @default(NEVER)
+  sourceImportError  String?
+  archivedAt         DateTime?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  category           InternalDocumentCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  creator            User?                        @relation("InternalDocumentCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  revisions          InternalDocumentRevision[]
+  roleAccess         InternalDocumentRoleAccess[]
 
   @@index([categoryId, archivedAt, updatedAt])
+  @@index([accessMode, archivedAt, updatedAt])
+  @@unique([sourceType, sourceExternalId])
+}
+
+model InternalDocumentRoleAccess {
+  id         String           @id @default(cuid())
+  roleId     String
+  documentId String
+  canView    Boolean          @default(true)
+  role       AccessRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  document   InternalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, documentId])
+  @@index([documentId])
 }
 
 model InternalDocumentRevision {
-  id         String                          @id @default(cuid())
-  documentId String
-  version    Int
-  content    Json
-  searchText String
-  editorId   String?
-  createdAt  DateTime                        @default(now())
-  document   InternalDocument                @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  editor     User?                           @relation("InternalDocumentRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
-  media      InternalDocumentRevisionMedia[]
+  id             String                          @id @default(cuid())
+  documentId     String
+  version        Int
+  content        Json
+  structuredData Json?
+  searchText     String
+  editorId       String?
+  createdAt      DateTime                        @default(now())
+  document       InternalDocument                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  editor         User?                           @relation("InternalDocumentRevisionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+  media          InternalDocumentRevisionMedia[]
 
   @@unique([documentId, version])
   @@index([documentId, createdAt])
@@ -916,21 +959,21 @@ model MelonlyLeave {
 }
 
 model TeamWeeklyReview {
-  id             String             @id @default(cuid())
-  weekStart      DateTime           @db.Date
-  weekEnd        DateTime           @db.Date
-  reportText     String?
-  sourceSyncedAt DateTime?
-  mentionMode    String             @default("CODE")
-  generatedAt    DateTime?
-  mostActiveMemberId String?
-  mostActiveDiscordId String?
+  id                    String                @id @default(cuid())
+  weekStart             DateTime              @db.Date
+  weekEnd               DateTime              @db.Date
+  reportText            String?
+  sourceSyncedAt        DateTime?
+  mentionMode           String                @default("CODE")
+  generatedAt           DateTime?
+  mostActiveMemberId    String?
+  mostActiveDiscordId   String?
   mostActiveDisplayName String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  results        TeamWeeklyResult[]
-  entries        TeamWeeklyEntry[]
-  signatures     TeamWeeklySignature[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  results               TeamWeeklyResult[]
+  entries               TeamWeeklyEntry[]
+  signatures            TeamWeeklySignature[]
 
   @@unique([weekStart, weekEnd])
   @@index([weekStart])
@@ -955,17 +998,17 @@ model DiscordTeamRank {
 }
 
 model DiscordRankHistory {
-  id             String       @id @default(cuid())
-  guildId        String
-  discordId      String
-  fromRoleId     String?
-  toRoleId       String?
-  fromLabel      String?
-  toLabel        String?
-  changedAt      DateTime
-  detectedAt     DateTime     @default(now())
-  fromRole       DiscordRole? @relation("DiscordRankHistoryFrom", fields: [fromRoleId], references: [id], onDelete: SetNull)
-  toRole         DiscordRole? @relation("DiscordRankHistoryTo", fields: [toRoleId], references: [id], onDelete: SetNull)
+  id         String       @id @default(cuid())
+  guildId    String
+  discordId  String
+  fromRoleId String?
+  toRoleId   String?
+  fromLabel  String?
+  toLabel    String?
+  changedAt  DateTime
+  detectedAt DateTime     @default(now())
+  fromRole   DiscordRole? @relation("DiscordRankHistoryFrom", fields: [fromRoleId], references: [id], onDelete: SetNull)
+  toRole     DiscordRole? @relation("DiscordRankHistoryTo", fields: [toRoleId], references: [id], onDelete: SetNull)
 
   @@index([guildId, discordId, changedAt])
   @@index([toRoleId, changedAt])

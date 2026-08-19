@@ -39,7 +39,7 @@ export default async function TicketDetailPage({
           author: {
             select: {
               name: true,
-              roleAssignments: { select: { role: { select: { key: true } } } },
+              roleAssignments: { select: { role: { select: { permissions: { select: { permission: { select: { key: true } } } } } } } },
             },
           },
         },
@@ -72,7 +72,7 @@ export default async function TicketDetailPage({
           </div>
           <div className="grid gap-4 p-5 md:p-6">
             {messages.map((message) => {
-              const staffAuthor = message.author.roleAssignments.some((assignment) => assignment.role.key !== "PLAYER");
+              const staffAuthor = message.author.roleAssignments.some((assignment) => assignment.role.permissions.some((item) => item.permission.key === "staff.access"));
               return (
                 <article key={message.id} className={"max-w-[85%] rounded-2xl border p-4 " + (staffAuthor ? "border-[#d6aa4c]/20 bg-[#d6aa4c]/[0.06]" : "border-white/[0.07] bg-white/[0.025]")}>
                   <div className="flex flex-wrap items-center gap-2 text-xs">

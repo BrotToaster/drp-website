@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAuthorizationContext } from "@/lib/authz";
 import { createCloudinaryPrivateDownloadUrl } from "@/lib/cloudinary";
-import { canAccessDocumentCategory } from "@/lib/permissions";
+import { canViewInternalDocument } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -15,14 +15,14 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       where: { id },
       include: {
         documentRevisions: {
-          select: { revision: { select: { document: { select: { categoryId: true, archivedAt: true } } } } },
+          select: { revision: { select: { document: { select: { categoryId: true, accessMode: true, archivedAt: true, roleAccess: true } } } } },
         },
       },
     }),
   ]);
   if (!asset || asset.visibility !== "INTERNAL") return NextResponse.json({ error: "Datei nicht gefunden." }, { status: 404 });
   const allowed = asset.documentRevisions.some(({ revision }) =>
-    !revision.document.archivedAt && canAccessDocumentCategory(authorization, revision.document.categoryId, "canView"),
+    !revision.document.archivedAt && canViewInternalDocument(authorization, revision.document),
   );
   if (!allowed) return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   try {

@@ -85,12 +85,16 @@ async function main() {
   }
 
   const roles = new Map();
+  const bootstrapRoles = (await prisma.accessRole.count()) === 0;
   for (const [key, name, color, priority] of roleDefinitions) {
-    const role = await prisma.accessRole.upsert({
-      where: { key },
-      update: { name, color, priority, isSystem: true },
-      create: { key, name, color, priority, isSystem: true },
-    });
+    const role = key === "OWNER" || bootstrapRoles
+      ? await prisma.accessRole.upsert({
+          where: { key },
+          update: key === "OWNER" ? { name, color, priority, isSystem: true } : {},
+          create: { key, name, color, priority, isSystem: true },
+        })
+      : await prisma.accessRole.findUnique({ where: { key } });
+    if (!role) continue;
     roles.set(key, role);
     await prisma.rolePermission.createMany({
       data: rolePermissionKeys[key].map((permissionKey) => ({
@@ -111,6 +115,7 @@ async function main() {
   for (const roleKey of ["SUPPORTER", "MODERATOR", "ADMIN", "OWNER"]) {
     for (const category of categories) {
       const role = roles.get(roleKey);
+      if (!role) continue;
       await prisma.roleTicketCategoryAccess.upsert({
         where: { roleId_categoryId: { roleId: role.id, categoryId: category.id } },
         update: { canView: true, canReply: true, canAssign: true, canStatus: true, canDelete: ["ADMIN", "OWNER"].includes(roleKey) },
@@ -126,6 +131,7 @@ async function main() {
   });
   for (const roleKey of ["PLAYER", "OWNER"]) {
     const role = roles.get(roleKey);
+    if (!role) continue;
     const sourceKey = roleKey === "OWNER" ? "owner-env" : "default-player";
     await prisma.userRoleAssignment.upsert({
       where: { userId_roleId_source_sourceKey: { userId: owner.id, roleId: role.id, source: "SYSTEM", sourceKey } },
@@ -222,6 +228,7 @@ async function main() {
   });
   for (const roleKey of ["SUPPORTER", "MODERATOR", "ADMIN", "OWNER"]) {
     const role = roles.get(roleKey);
+    if (!role) continue;
     await prisma.roleDocumentCategoryAccess.upsert({
       where: { roleId_categoryId: { roleId: role.id, categoryId: documentCategory.id } },
       update: {},
@@ -232,6 +239,13 @@ async function main() {
       update: {},
       create: { roleId: role.id, categoryId: calendarCategory.id, canCreate: true, canPublish: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey), canEditOwn: true, canManage: ["MODERATOR", "ADMIN", "OWNER"].includes(roleKey) },
     });
+  }
+  const configuredDefault = await prisma.siteSetting.findUnique({ where: { key: "auth.defaultAccessRole" } });
+  if (!configuredDefault) {
+    const fallback = roles.get("PLAYER") || Array.from(roles.values()).find((role) => role.key !== "OWNER");
+    if (fallback) {
+      await prisma.siteSetting.create({ key: "auth.defaultAccessRole", value: { roleId: fallback.id } });
+    }
   }
   for (const [id, key, enabled] of [
     ["team-role-strike-1", "STRIKE_1", true],
