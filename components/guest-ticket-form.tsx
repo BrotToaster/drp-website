@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useCallback } from "react";
 import { useFormStatus } from "react-dom";
 import { createGuestTicketAction } from "@/app/actions/guest-tickets";
-import type { ActionResult } from "@/lib/action-result";
+import { ensureMutationId, type ActionResult } from "@/lib/action-result";
 
 const initial: ActionResult<{ accessUrl: string }> = { ok: true, message: "" };
 
@@ -13,7 +13,10 @@ function GuestSubmit() {
 }
 
 export function GuestTicketForm() {
-  const [state, action] = useActionState(createGuestTicketAction, initial);
+  const normalizedAction = useCallback(async (previous: ActionResult<{ accessUrl: string }>, formData: FormData) => {
+    return ensureMutationId(await createGuestTicketAction(previous, formData));
+  }, []);
+  const [state, action] = useActionState(normalizedAction, initial);
   if (state.ok && state.data?.accessUrl) {
     const url = typeof window === "undefined" ? state.data.accessUrl : new URL(state.data.accessUrl, window.location.origin).toString();
     return <div className="guest-ticket-success" role="status"><span className="badge badge-success">Ticket erstellt</span><h2>Dein sicherer Zugangslink</h2><p>{state.message}</p><div className="guest-access-link"><code>{url}</code><button type="button" onClick={() => navigator.clipboard.writeText(url)}>Kopieren</button></div><a className="button button-primary" href={state.data.accessUrl}>Ticket jetzt öffnen</a><small>Ohne diesen Link können wir den Gastzugang nicht wiederherstellen. Teile ihn mit niemandem.</small></div>;

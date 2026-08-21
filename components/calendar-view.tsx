@@ -39,7 +39,17 @@ export default function CalendarView({ categories, staff = false }: { categories
       const response = await fetch(`/api/calendar?${params}`, { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Kalender konnte nicht geladen werden.");
-      success(payload.occurrences.map((occurrence: ApiOccurrence) => ({ id: occurrence.id, title: occurrence.status && occurrence.status !== "PUBLISHED" ? `[${occurrence.status === "DRAFT" ? "Entwurf" : "Prüfung"}] ${occurrence.title}` : occurrence.title, start: occurrence.startsAt, end: occurrence.endsAt, allDay: occurrence.allDay, backgroundColor: occurrence.category.color, borderColor: occurrence.category.color, extendedProps: occurrence })));
+      success(payload.occurrences.map((occurrence: ApiOccurrence) => ({
+        id: occurrence.id,
+        title: occurrence.status && occurrence.status !== "PUBLISHED" ? `[${occurrence.status === "DRAFT" ? "Entwurf" : "Prüfung"}] ${occurrence.title}` : occurrence.title,
+        start: occurrence.startsAt,
+        end: occurrence.endsAt,
+        allDay: occurrence.allDay,
+        backgroundColor: occurrence.category.color,
+        borderColor: occurrence.category.color,
+        classNames: occurrence.status && occurrence.status !== "PUBLISHED" ? ["calendar-event-internal", `calendar-event-${occurrence.status.toLocaleLowerCase("en")}`] : ["calendar-event-published"],
+        extendedProps: occurrence,
+      })));
     } catch (error) { failure(error instanceof Error ? error : new Error("Kalender konnte nicht geladen werden.")); }
   };
   const onDates = (info: DatesSetInfo) => { localStorage.setItem("drp-calendar-view", info.view.type); };

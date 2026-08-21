@@ -26,6 +26,16 @@ function countStaff(staff: DetailedResponse["Staff"]) {
 function cleanDetails(details: DetailedResponse): Prisma.InputJsonValue {
   const safe = { ...details };
   delete safe.JoinKey;
+  if (Array.isArray(safe.Players)) {
+    safe.Players = safe.Players.map((player) => ({
+      ...player,
+      Location: player.Location ? {
+        PostalCode: player.Location.PostalCode,
+        StreetName: player.Location.StreetName,
+        BuildingNumber: player.Location.BuildingNumber,
+      } : undefined,
+    }));
+  }
   return JSON.parse(JSON.stringify(safe)) as Prisma.InputJsonValue;
 }
 

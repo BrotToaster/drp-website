@@ -47,7 +47,6 @@ export const dashboardNavigation: NavigationGroup[] = [
   { label: "Mein Konto", items: [
     { href: "/dashboard/profil", label: "Profil & Konten", code: "PR", keywords: ["discord", "roblox", "konto"] },
     { href: "/dashboard/tickets", label: "Website-Tickets", code: "TK", keywords: ["kontakt", "technik", "ownership"] },
-    { href: "/dashboard/bewerbung", label: "Bewerbungen", code: "BE", keywords: ["melonly", "bewerben", "status"] },
   ] },
 ];
 
@@ -57,8 +56,6 @@ export const staffNavigation: NavigationGroup[] = [
     { href: "/staff/tickets", label: "Website-Tickets", code: "TK", keywords: ["kontakt", "technik", "ownership"], permission: "tickets.view" },
     { href: "/staff/nutzer", label: "Nutzerverzeichnis", code: "NU", keywords: ["discord", "roblox", "mitglieder"], permission: "users.view" },
     { href: "/staff/aktivitaet", label: "Teamaktivität", code: "AK", keywords: ["melonly", "zeiten", "loa", "weekly"], permission: "team_activity.view_self" },
-    { href: "/staff/bewerbungen", label: "Bewerbungen", code: "BE", keywords: ["melonly", "prüfung"], permission: "staff.access" },
-    { href: "/staff/sanktionen", label: "Moderationsmaßnahmen", code: "MO", keywords: ["melonly", "warns", "appeals", "sanktionen"], permission: "staff.access" },
   ] },
   { label: "Inhalte & Wissen", items: [
     { href: "/staff/kalender", label: "Kalender", code: "KA", keywords: ["termine", "events"], permission: "staff.access" },

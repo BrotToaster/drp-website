@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RichContent } from "@/components/rich-content";
 import { MediaGallery } from "@/components/media-gallery";
 import type { RuleView } from "@/lib/demo-data";
@@ -8,7 +8,9 @@ import { formatDate } from "@/lib/site";
 
 export function RuleExplorer({ rules }: { rules: RuleView[] }) {
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [category, setCategory] = useState("Alle");
+  const searchRef = useRef<HTMLInputElement>(null);
   const categories = ["Alle", ...Array.from(new Set(rules.map((rule) => rule.category)))];
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -18,18 +20,36 @@ export function RuleExplorer({ rules }: { rules: RuleView[] }) {
         (!term || rule.searchText.toLowerCase().includes(term)),
     );
   }, [rules, query, category]);
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
 
   return (
     <div>
-      <div className="surface mb-8 grid gap-4 p-4 md:grid-cols-[1fr_auto]">
-        <label className="sr-only" htmlFor="rule-search">Regelwerk durchsuchen</label>
-        <input
-          id="rule-search"
-          className="field"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Regelwerk durchsuchen …"
-        />
+      <div className="surface rule-tools mb-8 grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="rule-search" data-open={searchOpen ? "true" : "false"}>
+          <button type="button" className="rule-search-trigger" aria-label="Regelwerk durchsuchen" aria-expanded={searchOpen} onClick={() => setSearchOpen(true)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+          </button>
+          <div className="rule-search-field" aria-hidden={!searchOpen} inert={!searchOpen}>
+            <label className="sr-only" htmlFor="rule-search">Regelwerk durchsuchen</label>
+            <input
+              ref={searchRef}
+              id="rule-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setQuery("");
+                  setSearchOpen(false);
+                }
+              }}
+              placeholder="Regelwerk durchsuchen …"
+              tabIndex={searchOpen ? 0 : -1}
+            />
+            <button type="button" aria-label="Suche schließen" onClick={() => { setQuery(""); setSearchOpen(false); }}>×</button>
+          </div>
+        </div>
         <div className="flex max-w-full gap-2 overflow-x-auto">
           {categories.map((item) => (
             <button

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { siteConfig } from "@/lib/site";
 
@@ -16,7 +17,7 @@ export const defaultDepartments: HomepageDepartment[] = [
   { code: "MOVEBERLIN", name: "MoveBerlin", copy: "Halte als Stadtwerke- und Infrastrukturdienst Straßen, Versorgung und Verkehr am Laufen." },
 ];
 
-export async function getHomepageSettings() {
+export const getHomepageSettings = cache(async function getHomepageSettings() {
   try {
     const [cards, departmentSetting, linkSetting] = await Promise.all([
       prisma.homepageRoleCard.findMany({ where: { visible: true }, include: { image: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
@@ -54,4 +55,4 @@ export async function getHomepageSettings() {
   } catch {
     return { departments: defaultDepartments, discordUrl: siteConfig.discordUrl, robloxUrl: siteConfig.robloxUrl, discordSupportUrl: siteConfig.discordUrl, melonlyUrl: "https://melonly.xyz/dashboard" };
   }
-}
+});

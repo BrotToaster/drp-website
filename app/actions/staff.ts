@@ -1,9 +1,9 @@
 "use server";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma, TicketStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { ActionResult } from "@/lib/action-result";
+import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 import { plainTextFromContent, parseContentJson } from "@/lib/content";
 import { requirePermission } from "@/lib/authz";
 import { deleteCloudinaryAsset } from "@/lib/cloudinary";
@@ -81,7 +81,7 @@ async function cleanupUnusedMedia(candidates: AssetCandidate[]) {
 export async function updateTicketStatusAction(
   _previous: ActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ status: TicketStatus }>> {
   const { user: actor, authorization } = await requirePermission("tickets.status");
   const parsed = ticketStatusSchema.safeParse({
     ticketId: value(formData, "ticketId"),
@@ -89,16 +89,16 @@ export async function updateTicketStatusAction(
     expectedStatus: value(formData, "expectedStatus"),
   });
   if (!parsed.success) {
-    return { ok: false, code: "VALIDATION", message: "Ungültige Statusangabe." };
+    return actionFailure("Ungültige Statusangabe.", "VALIDATION");
   }
   if (!canTransitionTicket(parsed.data.expectedStatus, parsed.data.status)) {
-    return { ok: false, code: "VALIDATION", message: "Dieser Statuswechsel ist nicht erlaubt." };
+    return actionFailure("Dieser Statuswechsel ist nicht erlaubt.", "VALIDATION");
   }
 
   const ticket = await prisma.ticket.findUnique({ where: { id: parsed.data.ticketId } });
-  if (!ticket) return { ok: false, code: "VALIDATION", message: "Ticket nicht gefunden." };
+  if (!ticket) return actionFailure("Ticket nicht gefunden.", "VALIDATION");
   if (!canAccessTicketCategory(authorization, ticket.categoryId, "canStatus")) {
-    return { ok: false, code: "FORBIDDEN", message: "Keine Berechtigung für diese Kategorie." };
+    return actionFailure("Keine Berechtigung für diese Kategorie.", "FORBIDDEN");
   }
 
   const changed = await prisma.$transaction(async (tx) => {
@@ -120,17 +120,13 @@ export async function updateTicketStatusAction(
   });
 
   if (!changed) {
-    return {
-      ok: false,
-      code: "CONFLICT",
-      message: "Das Ticket wurde zwischenzeitlich geändert. Die Ansicht wurde aktualisiert.",
-    };
+    return actionFailure("Das Ticket wurde zwischenzeitlich geändert. Bitte lade die Ansicht neu.", "CONFLICT");
   }
   revalidatePath("/staff");
   revalidatePath("/staff/tickets");
   revalidatePath("/dashboard/tickets");
   revalidatePath("/dashboard/tickets/" + ticket.id);
-  return { ok: true, message: "Status wurde aktualisiert." };
+  return actionSuccess("Status wurde aktualisiert.", { data: { status: parsed.data.status }, refresh: "none" });
 }
 
 export async function setManualRolesAction(formData: FormData) {

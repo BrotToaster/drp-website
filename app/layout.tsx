@@ -11,6 +11,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { PublicChrome } from "@/components/route-chrome";
+import { RouteMotion } from "@/components/route-motion";
 import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <Suspense fallback={null}>
           <NavigationProgress />
+          <RouteMotion />
         </Suspense>
         <PublicChrome><Header /></PublicChrome>
         <main>{children}</main>

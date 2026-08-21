@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { allPermissionKeys } from "@/lib/permission-keys";
 import { requirePermission } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { canManageDiscordRoleMappings, diffDiscordRoleMappings } from "@/lib/role-mappings";
 
 function value(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -15,14 +16,19 @@ function keyify(input: string) {
 }
 
 export async function saveAccessRoleAction(formData: FormData) {
-  const { user: actor } = await requirePermission("roles.manage");
+  const { user: actor, authorization } = await requirePermission("roles.manage");
   const roleId = value(formData, "roleId");
   const name = value(formData, "name");
   const description = value(formData, "description");
   const color = value(formData, "color");
   const priority = Number(value(formData, "priority"));
+  const manageDiscordMappings = formData.get("manageDiscordMappings") === "1";
+  const discordRoleIds = Array.from(new Set(formData.getAll("discordRoleIds").map(String).filter(Boolean)));
   if (name.length < 2 || !/^#[0-9a-fA-F]{6}$/.test(color) || !Number.isInteger(priority)) {
     redirect("/admin/rollen?error=invalid");
+  }
+  if (manageDiscordMappings && !canManageDiscordRoleMappings(authorization)) {
+    redirect("/admin/rollen?error=discord-permission");
   }
 
   if (roleId) {
@@ -31,27 +37,62 @@ export async function saveAccessRoleAction(formData: FormData) {
     if (existing.key === "OWNER") redirect("/admin/rollen?error=protected");
   }
 
-  const role = roleId
-    ? await prisma.accessRole.update({
-        where: { id: roleId },
-        data: { name, description: description || null, color, priority },
-      })
-    : await prisma.accessRole.create({
-        data: {
-          key: keyify(name) + "_" + Date.now().toString(36).toUpperCase(),
-          name,
-          description: description || null,
-          color,
-          priority,
+  await prisma.$transaction(async (tx) => {
+    if (manageDiscordMappings && discordRoleIds.length) {
+      const available = await tx.discordRole.count({ where: { id: { in: discordRoleIds } } });
+      if (available !== discordRoleIds.length) redirect("/admin/rollen?error=discord-role");
+    }
+    const savedRole = roleId
+      ? await tx.accessRole.update({
+          where: { id: roleId },
+          data: { name, description: description || null, color, priority },
+        })
+      : await tx.accessRole.create({
+          data: {
+            key: keyify(name) + "_" + Date.now().toString(36).toUpperCase(),
+            name,
+            description: description || null,
+            color,
+            priority,
+          },
+        });
+    let addedDiscordRoleIds: string[] = [];
+    let removedDiscordRoleIds: string[] = [];
+    if (manageDiscordMappings) {
+      const existingMappings = await tx.discordRoleMapping.findMany({
+        where: { accessRoleId: savedRole.id, active: true },
+        select: { discordRoleId: true },
+      });
+      const difference = diffDiscordRoleMappings(existingMappings.map((mapping) => mapping.discordRoleId), discordRoleIds);
+      addedDiscordRoleIds = difference.added;
+      removedDiscordRoleIds = difference.removed;
+      await tx.discordRoleMapping.deleteMany({
+        where: {
+          accessRoleId: savedRole.id,
+          ...(discordRoleIds.length ? { discordRoleId: { notIn: discordRoleIds } } : {}),
         },
       });
-  await prisma.auditLog.create({
-    data: {
-      actorId: actor.id,
-      action: roleId ? "ACCESS_ROLE_UPDATED" : "ACCESS_ROLE_CREATED",
-      entityType: "AccessRole",
-      entityId: role.id,
-    },
+      if (discordRoleIds.length) {
+        await tx.discordRoleMapping.createMany({
+          data: discordRoleIds.map((discordRoleId) => ({ discordRoleId, accessRoleId: savedRole.id, active: true })),
+          skipDuplicates: true,
+        });
+        await tx.discordRoleMapping.updateMany({
+          where: { accessRoleId: savedRole.id, discordRoleId: { in: discordRoleIds } },
+          data: { active: true },
+        });
+      }
+    }
+    await tx.auditLog.create({
+      data: {
+        actorId: actor.id,
+        action: roleId ? "ACCESS_ROLE_UPDATED" : "ACCESS_ROLE_CREATED",
+        entityType: "AccessRole",
+        entityId: savedRole.id,
+        metadata: manageDiscordMappings ? { discordMappings: { added: addedDiscordRoleIds, removed: removedDiscordRoleIds } } : undefined,
+      },
+    });
+    return savedRole;
   });
   revalidatePath("/admin/rollen");
   revalidatePath("/staff");
@@ -224,28 +265,42 @@ export async function saveDefaultAccessRoleAction(formData: FormData) {
 }
 
 export async function saveDiscordRoleMappingAction(formData: FormData) {
-  const { user: actor } = await requirePermission("discord.manage");
+  const { user: actor, authorization } = await requirePermission("roles.manage");
+  if (!canManageDiscordRoleMappings(authorization)) redirect("/admin/discord?error=permissions");
   const discordRoleId = value(formData, "discordRoleId");
-  const accessRoleId = value(formData, "accessRoleId");
-  const active = formData.get("active") === "on";
-  if (!discordRoleId || !accessRoleId) redirect("/admin/discord?error=mapping");
+  const accessRoleIds = Array.from(new Set(formData.getAll("accessRoleIds").map(String).filter(Boolean)));
+  if (!discordRoleId) redirect("/admin/discord?error=mapping");
   await prisma.$transaction(async (tx) => {
-    await tx.discordRoleMapping.upsert({
-      where: { discordRoleId_accessRoleId: { discordRoleId, accessRoleId } },
-      update: { active },
-      create: { discordRoleId, accessRoleId, active },
+    const [discordRole, validRoleCount, existing] = await Promise.all([
+      tx.discordRole.findUnique({ where: { id: discordRoleId }, select: { id: true } }),
+      accessRoleIds.length ? tx.accessRole.count({ where: { id: { in: accessRoleIds } } }) : Promise.resolve(0),
+      tx.discordRoleMapping.findMany({ where: { discordRoleId, active: true }, select: { accessRoleId: true } }),
+    ]);
+    if (!discordRole || validRoleCount !== accessRoleIds.length) redirect("/admin/discord?error=mapping");
+    const difference = diffDiscordRoleMappings(existing.map((mapping) => mapping.accessRoleId), accessRoleIds);
+    await tx.discordRoleMapping.deleteMany({
+      where: { discordRoleId, ...(accessRoleIds.length ? { accessRoleId: { notIn: accessRoleIds } } : {}) },
     });
+    if (accessRoleIds.length) {
+      await tx.discordRoleMapping.createMany({
+        data: accessRoleIds.map((accessRoleId) => ({ discordRoleId, accessRoleId, active: true })),
+        skipDuplicates: true,
+      });
+      await tx.discordRoleMapping.updateMany({ where: { discordRoleId, accessRoleId: { in: accessRoleIds } }, data: { active: true } });
+    }
     await tx.auditLog.create({
       data: {
         actorId: actor.id,
         action: "DISCORD_ROLE_MAPPING_UPDATED",
         entityType: "DiscordRoleMapping",
         entityId: discordRoleId,
-        metadata: { accessRoleId, active },
+        metadata: { addedAccessRoleIds: difference.added, removedAccessRoleIds: difference.removed },
       },
     });
   });
   revalidatePath("/admin/discord");
+  revalidatePath("/admin/rollen");
+  redirect("/admin/discord?saved=mapping");
 }
 
 export async function saveTicketAccessAction(formData: FormData) {

@@ -10,11 +10,13 @@ import { getStoredErlcTelemetry } from "@/lib/erlc-telemetry";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/site";
+import { parseErlcPlayerIdentity } from "@/lib/erlc-location";
+import type { ErLcPlayer } from "@/lib/erlc";
 
 export const dynamic = "force-dynamic";
 
 type DetailRecord = {
-  Players?: Array<{ Player?: string; Team?: string; Callsign?: string; Permission?: string; WantedStars?: number; Location?: { PostalCode?: string; StreetName?: string } }>;
+  Players?: ErLcPlayer[];
   JoinLogs?: Array<{ Player?: string; Join?: boolean; Timestamp?: number }>;
   CommandLogs?: Array<{ Player?: string; Command?: string; Timestamp?: number }>;
   KillLogs?: Array<Record<string, unknown>>;
@@ -37,24 +39,34 @@ export default async function StaffDashboardPage() {
   const chart = snapshots.filter((_, index) => index % Math.max(1, Math.floor(snapshots.length / 24)) === 0).slice(-24);
   const stale = !state?.lastSuccessfulAt || Date.now() - state.lastSuccessfulAt.getTime() > 10 * 60 * 1000;
   const rawPlayers = details.Players || [];
+  const playerIdentities = rawPlayers.map((player) => parseErlcPlayerIdentity(player.Player));
+  const robloxUserIds = playerIdentities.map((identity) => identity.robloxUserId).filter(Boolean);
+  const robloxNames = playerIdentities.map((identity) => identity.username).filter((name) => name !== "Unbekannt");
   const linkedUsers = canSeeDetails && rawPlayers.length ? await prisma.user.findMany({
-    where: { robloxName: { in: rawPlayers.map((player) => player.Player || "").filter(Boolean), mode: "insensitive" } },
-    select: { robloxName: true, robloxDisplayName: true, discordDisplayName: true, discordUsername: true },
+    where: { OR: [
+      ...(robloxUserIds.length ? [{ robloxUserId: { in: robloxUserIds } }] : []),
+      ...(robloxNames.length ? [{ robloxName: { in: robloxNames, mode: "insensitive" as const } }] : []),
+    ] },
+    select: { robloxUserId: true, robloxName: true, robloxDisplayName: true, discordDisplayName: true, discordUsername: true },
   }) : [];
-  const identityByRoblox = new Map(linkedUsers.filter((item) => item.robloxName).map((item) => [item.robloxName!.toLocaleLowerCase("en"), [item.robloxDisplayName || item.robloxName, item.discordDisplayName || item.discordUsername].filter(Boolean).join(" · ")]));
-  const players: OperationsPlayer[] = rawPlayers.map((player, index) => ({
-    id: `${player.Player || "player"}-${index}`,
-    name: player.Player || "Unbekannt",
+  const identityLabel = (item: typeof linkedUsers[number]) => [item.robloxDisplayName || item.robloxName, item.discordDisplayName || item.discordUsername].filter(Boolean).join(" · ");
+  const identityById = new Map(linkedUsers.filter((item) => item.robloxUserId).map((item) => [item.robloxUserId!, identityLabel(item)]));
+  const identityByName = new Map(linkedUsers.filter((item) => item.robloxName).map((item) => [item.robloxName!.toLocaleLowerCase("en"), identityLabel(item)]));
+  const players: OperationsPlayer[] = rawPlayers.map((player, index) => {
+    const parsedIdentity = parseErlcPlayerIdentity(player.Player);
+    return {
+    id: `${parsedIdentity.robloxUserId || parsedIdentity.username}-${index}`,
+    name: parsedIdentity.username,
     team: player.Team || "–",
     callsign: player.Callsign || "–",
     wanted: player.WantedStars ?? 0,
     location: [player.Location?.StreetName, player.Location?.PostalCode].filter(Boolean).join(" · ") || "–",
-    identity: identityByRoblox.get((player.Player || "").toLocaleLowerCase("en")),
-  }));
+    identity: identityById.get(parsedIdentity.robloxUserId) || identityByName.get(parsedIdentity.username.toLocaleLowerCase("en")),
+  }; });
   const events: OperationsEvent[] = [
-    ...(details.JoinLogs || []).map((log, index) => ({ id: `join-${index}`, kind: "Join" as const, title: `${log.Player || "Spieler"} ${log.Join ? "ist beigetreten" : "hat den Server verlassen"}`, time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
-    ...(details.CommandLogs || []).map((log, index) => ({ id: `command-${index}`, kind: "Command" as const, title: log.Player || "Spieler", detail: log.Command || "Befehl ohne Bezeichnung", time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
-    ...(details.ModCalls || []).map((log, index) => ({ id: `modcall-${index}`, kind: "Mod-Call" as const, title: typeof log.Caller === "string" ? log.Caller : "Moderationsanfrage", detail: Object.entries(log).filter(([key]) => key !== "Caller" && key !== "Timestamp").slice(0, 3).map(([key, value]) => `${key}: ${String(value)}`).join(" · "), time: typeof log.Timestamp === "number" ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+    ...(details.JoinLogs || []).map((log, index) => ({ id: `join-${index}`, kind: "Join" as const, title: `${parseErlcPlayerIdentity(log.Player).username} ${log.Join ? "ist beigetreten" : "hat den Server verlassen"}`, time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+    ...(details.CommandLogs || []).map((log, index) => ({ id: `command-${index}`, kind: "Command" as const, title: parseErlcPlayerIdentity(log.Player).username, detail: log.Command || "Befehl ohne Bezeichnung", time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+    ...(details.ModCalls || []).map((log, index) => ({ id: `modcall-${index}`, kind: "Mod-Call" as const, title: typeof log.Caller === "string" ? parseErlcPlayerIdentity(log.Caller).username : "Moderationsanfrage", detail: Object.entries(log).filter(([key]) => key !== "Caller" && key !== "Timestamp").slice(0, 3).map(([key, value]) => `${key}: ${String(value)}`).join(" · "), time: typeof log.Timestamp === "number" ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
   ].slice(0, 150);
 
   return (

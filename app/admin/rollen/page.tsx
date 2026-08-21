@@ -1,9 +1,11 @@
 import { deleteAccessRoleAction, saveAccessRoleAction, saveDefaultAccessRoleAction, saveRolePermissionsAction } from "@/app/actions/admin";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { DiscordRolePicker } from "@/components/discord-role-picker";
 import { PortalShell } from "@/components/portal-shell";
 import { SubmitButton } from "@/components/submit-button";
 import { requirePermission } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { canManageDiscordRoleMappings } from "@/lib/role-mappings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,17 +16,22 @@ export default async function RolesPage({
 }) {
   const { authorization } = await requirePermission("roles.manage");
   const query = await searchParams;
-  const [roles, permissions, defaultRoleSetting] = await Promise.all([
+  const canManageDiscord = canManageDiscordRoleMappings(authorization);
+  const [roles, permissions, defaultRoleSetting, discordRoles] = await Promise.all([
     prisma.accessRole.findMany({
       orderBy: { priority: "desc" },
       include: {
         permissions: { include: { permission: true } },
         assignments: { select: { source: true, userId: true } },
+        discordMappings: { include: { discordRole: true } },
         _count: { select: { assignments: true, discordMappings: true, ticketAccesses: true, documentAccesses: true, documentGrants: true, calendarAccesses: true } },
       },
     }),
     prisma.permission.findMany({ orderBy: [{ group: "asc" }, { label: "asc" }] }),
     prisma.siteSetting.findUnique({ where: { key: "auth.defaultAccessRole" } }),
+    canManageDiscord
+      ? prisma.discordRole.findMany({ orderBy: [{ guildId: "asc" }, { position: "desc" }, { name: "asc" }] })
+      : Promise.resolve([]),
   ]);
   const groups = Array.from(new Set(permissions.map((permission) => permission.group)));
   const defaultRoleId = defaultRoleSetting?.value && typeof defaultRoleSetting.value === "object" && !Array.isArray(defaultRoleSetting.value)
@@ -33,7 +40,7 @@ export default async function RolesPage({
 
   return (
     <PortalShell authorization={authorization} title="Rollen & Berechtigungen" description="Kombinierbare Rollen erstellen, sortieren und über eine Berechtigungsmatrix konfigurieren." section="admin">
-      {(query.error || query.saved) && <p className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>{query.error === "protected" ? "Owner kann weder gelöscht noch als Ersatzrolle verwendet werden." : query.error === "replacement" ? "Bitte wähle eine andere Ersatzrolle." : query.error === "default" ? "Die Standardrolle muss eine vorhandene Rolle außer Owner sein." : query.error ? "Eingaben konnten nicht gespeichert werden." : query.saved === "deleted" ? "Rolle wurde gelöscht und ihre Zuweisungen wurden übertragen." : query.saved === "default" ? "Standardrolle wurde aktualisiert." : "Änderungen wurden gespeichert."}</p>}
+      {(query.error || query.saved) && <p className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>{query.error === "protected" ? "Owner kann weder gelöscht noch als Ersatzrolle verwendet werden." : query.error === "replacement" ? "Bitte wähle eine andere Ersatzrolle." : query.error === "default" ? "Die Standardrolle muss eine vorhandene Rolle außer Owner sein." : query.error === "discord-permission" ? "Dir fehlt die Berechtigung, Discord-Zuordnungen zu ändern." : query.error === "discord-role" ? "Mindestens eine ausgewählte Discord-Rolle ist nicht mehr verfügbar." : query.error ? "Eingaben konnten nicht gespeichert werden." : query.saved === "deleted" ? "Rolle wurde gelöscht und ihre Zuweisungen wurden übertragen." : query.saved === "default" ? "Standardrolle wurde aktualisiert." : "Änderungen wurden gespeichert."}</p>}
       <form action={saveDefaultAccessRoleAction} className="surface mb-5 grid gap-4 p-6 md:grid-cols-[1fr_auto] md:items-end">
         <label className="field-label">Standardrolle für neue Mitglieder
           <select className="field" name="roleId" defaultValue={defaultRoleId} required>
@@ -51,6 +58,7 @@ export default async function RolesPage({
           <label className="field-label">Farbe<input className="field h-12" name="color" type="color" defaultValue="#d6aa4c" /></label>
           <label className="field-label">Priorität<input className="field" name="priority" type="number" defaultValue="10" /></label>
           <label className="field-label">Beschreibung<input className="field" name="description" /></label>
+          {canManageDiscord && <DiscordRolePicker roles={discordRoles} />}
           <SubmitButton>Rolle erstellen</SubmitButton>
         </form>
       </details>
@@ -78,6 +86,7 @@ export default async function RolesPage({
                 <label className="field-label">Farbe<input className="field h-12" name="color" type="color" defaultValue={role.color} /></label>
                 <label className="field-label">Priorität<input className="field" name="priority" type="number" defaultValue={role.priority} /></label>
                 <label className="field-label">Beschreibung<input className="field" name="description" defaultValue={role.description || ""} /></label>
+                {canManageDiscord && <DiscordRolePicker roles={discordRoles} selectedIds={role.discordMappings.filter((mapping) => mapping.active).map((mapping) => mapping.discordRoleId)} />}
                 <SubmitButton variant="secondary">Rollendaten speichern</SubmitButton>
               </form>}
               <form action={saveRolePermissionsAction} className="mt-6 border-t border-white/[0.07] pt-6">

@@ -4,6 +4,13 @@ export type ErLcPlayer = {
   Callsign?: string;
   Permission?: string;
   WantedStars?: number;
+  Location?: {
+    LocationX?: number;
+    LocationZ?: number;
+    PostalCode?: string;
+    StreetName?: string;
+    BuildingNumber?: string;
+  };
 };
 
 export type ErLcServerResponse = {
@@ -76,9 +83,9 @@ export const demoServerDetails: ErLcServerResponse = {
   JoinKey: "DRP2026",
   Queue: [120011, 120012],
   Players: [
-    { Team: "Sheriff", Player: "DemoOfficer:1001", Callsign: "1-S-12", Permission: "Server Moderator" },
-    { Team: "Civilian", Player: "LibertyCitizen:1002", Callsign: "", Permission: "Normal" },
-    { Team: "Fire", Player: "MedicWest:1003", Callsign: "M-21", Permission: "Normal" },
+    { Team: "Sheriff", Player: "DemoOfficer:1001", Callsign: "1-S-12", Permission: "Server Moderator", Location: { LocationX: -410, LocationZ: 270, PostalCode: "403", StreetName: "Independence Parkway" } },
+    { Team: "Civilian", Player: "LibertyCitizen:1002", Callsign: "", Permission: "Normal", Location: { LocationX: 180, LocationZ: -520, PostalCode: "108", StreetName: "Freedom Avenue" } },
+    { Team: "Fire", Player: "MedicWest:1003", Callsign: "M-21", Permission: "Normal", Location: { LocationX: 720, LocationZ: 310, PostalCode: "218", StreetName: "Park Street" } },
   ],
   Staff: { Admins: { "1001": "DemoOfficer" }, Mods: {}, Helpers: {} },
   JoinLogs: [{ Join: true, Timestamp: Math.floor(Date.now() / 1000) - 120, Player: "LibertyCitizen:1002" }],

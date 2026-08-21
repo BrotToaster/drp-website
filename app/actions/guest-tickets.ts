@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import type { ActionResult } from "@/lib/action-result";
+import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 import { createGuestTicketToken, guestFingerprint, guestTicketCookieName, hashGuestTicketToken, verifyGuestTicketSession } from "@/lib/guest-tickets";
 import { prisma } from "@/lib/prisma";
 import { guestTicketSchema, ticketMessageSchema } from "@/lib/validators";
@@ -19,15 +19,15 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
     message: formValue(formData, "message"),
     website: formValue(formData, "website"),
   });
-  if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe Name, Kategorie, Betreff und Nachricht." };
+  if (!parsed.success) return actionFailure("Bitte prüfe Name, Kategorie, Betreff und Nachricht.", "VALIDATION");
   const requestHeaders = await headers();
   const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || "local";
   const fingerprintHash = guestFingerprint(ip);
   await prisma.guestTicketRateLimit.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   const recent = await prisma.guestTicketRateLimit.count({ where: { fingerprintHash, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } } });
-  if (recent >= 3) return { ok: false, code: "CONFLICT", message: "Zu viele neue Tickets. Bitte versuche es später erneut oder nutze Discord." };
+  if (recent >= 3) return actionFailure("Zu viele neue Tickets. Bitte versuche es später erneut oder nutze Discord.", "CONFLICT");
   const category = await prisma.ticketCategory.findFirst({ where: { key: parsed.data.category, enabled: true } });
-  if (!category) return { ok: false, code: "VALIDATION", message: "Diese Ticketkategorie ist derzeit nicht verfügbar." };
+  if (!category) return actionFailure("Diese Ticketkategorie ist derzeit nicht verfügbar.", "VALIDATION");
   const token = createGuestTicketToken();
   const accessId = randomUUID();
   const ticketId = randomUUID();
@@ -42,9 +42,12 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
     });
     revalidatePath("/staff");
     revalidatePath("/staff/tickets");
-    return { ok: true, message: `Ticket #${ticket.number} wurde erstellt. Speichere jetzt deinen sicheren Zugriffslink.`, data: { accessUrl: `/kontakt/zugang?token=${encodeURIComponent(token)}` }, refresh: "none" };
+    return actionSuccess(`Ticket #${ticket.number} wurde erstellt. Speichere jetzt deinen sicheren Zugriffslink.`, {
+      data: { accessUrl: `/kontakt/zugang?token=${encodeURIComponent(token)}` },
+      refresh: "none",
+    });
   } catch {
-    return { ok: false, code: "SERVER", message: "Das Ticket konnte nicht erstellt werden. Bitte nutze alternativ den Discord-Support." };
+    return actionFailure("Das Ticket konnte nicht erstellt werden. Bitte nutze alternativ den Discord-Support.");
   }
 }
 
