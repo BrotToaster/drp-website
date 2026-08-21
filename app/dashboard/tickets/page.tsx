@@ -18,12 +18,15 @@ export const dynamic = "force-dynamic";
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; view?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; view?: string; category?: string }>;
 }) {
   const user = await ensureDbUser();
   const authorization = await getAuthorizationContext(user.id);
   const query = await searchParams;
   const archived = query.view === "archive";
+  const requestedCategory = ["CONTACT", "TECHNICAL", "OWNERSHIP"].includes(query.category || "")
+    ? query.category
+    : undefined;
   const [tickets, categories] = await Promise.all([
     prisma.ticket.findMany({
       where: {
@@ -35,7 +38,7 @@ export default async function TicketsPage({
       include: { category: { select: { label: true } } },
     }),
     prisma.ticketCategory.findMany({
-      where: { enabled: true, key: { in: ["CONTACT", "TECHNICAL"] } },
+      where: { enabled: true, key: { in: ["CONTACT", "TECHNICAL", "OWNERSHIP"] } },
       orderBy: { sortOrder: "asc" },
     }),
   ]);
@@ -71,7 +74,7 @@ export default async function TicketsPage({
             <h2 className="text-xl font-semibold">Neues Ticket</h2>
             <div className="mt-6 grid gap-5">
               <label className="field-label">Kategorie
-                <select className="field" name="category" defaultValue="TECHNICAL">
+                <select className="field" name="category" defaultValue={requestedCategory || "TECHNICAL"}>
                   {categories.map((category) => <option key={category.id} value={category.key}>{category.label}</option>)}
                 </select>
               </label>

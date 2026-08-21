@@ -56,6 +56,19 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="section-space border-b border-white/[0.07] bg-white/[0.012]">
+        <div className="container-shell">
+          <SectionHeading eyebrow="Dein Einstieg" title="In drei Schritten ins Roleplay." copy="Alles, was du vor deinem ersten Einsatz brauchst – klar und ohne Umwege." />
+          <ol className="mt-12 grid gap-4 lg:grid-cols-3">
+            {[
+              ["01", "Community beitreten", "Komm auf den Discord, lies die Hinweise und lerne die Community kennen.", homepage.discordUrl],
+              ["02", "Regelwerk verstehen", "Prüfe die aktuellen Regeln und bestätige sie später in deinem DRP-Konto.", "/regelwerk"],
+              ["03", "Server betreten", "Sieh den Live-Status, verbinde dich mit ER:LC und starte deine Geschichte.", "/server"],
+            ].map(([number, title, copy, href]) => <li key={number} className="surface surface-interactive p-7"><span className="display-font text-3xl font-bold text-[#f2c14e]">{number}</span><h3 className="mt-8 text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-7 text-[#90969a]">{copy}</p>{href.startsWith("http") ? <a href={href} target="_blank" rel="noreferrer" className="mt-6 inline-block text-sm font-bold text-[#f2c14e]">Öffnen ↗</a> : <Link href={href} className="mt-6 inline-block text-sm font-bold text-[#f2c14e]">Öffnen →</Link>}</li>)}
+          </ol>
+        </div>
+      </section>
+
       <section className="section-space">
         <div className="container-shell">
           <SectionHeading
@@ -109,15 +122,15 @@ export default async function HomePage() {
 
       <section className="pb-24">
         <div className="container-shell">
-          <div className="surface relative overflow-hidden px-6 py-16 text-center md:px-16 md:py-20">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(214,170,76,.18),transparent_50%)]" />
-            <div className="relative mx-auto max-w-2xl">
-              <span className="eyebrow">Bereit für Liberty County?</span>
-              <h2 className="section-title mt-5">Deine nächste Schicht beginnt jetzt.</h2>
-              <p className="body-large mt-5">Komm auf unseren Discord, lies das Regelwerk und werde Teil von DRP.</p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <a href={homepage.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">Discord beitreten</a>
-                <Link href="/regelwerk" className="button button-secondary">Regelwerk lesen</Link>
+          <div className="drp-system-cta surface relative overflow-hidden px-6 py-16 md:px-16 md:py-20">
+            <div className="absolute inset-0 bg-black/20" />
+            <div className="relative ml-auto max-w-2xl text-center lg:text-left">
+              <span className="eyebrow">DRP-System</span>
+              <h2 className="section-title mt-5">Website, Konto und Staff-Werkzeuge an einem Ort.</h2>
+              <p className="body-large mt-5">Öffne dein DRP-Konto für Profil, Regelbestätigung und Website-Tickets. Operative Melonly-Aufgaben bleiben klar verlinkt.</p>
+              <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+                <Link href="/dashboard" className="button button-primary">DRP-System öffnen</Link>
+                <a href={homepage.discordSupportUrl} target="_blank" rel="noreferrer" className="button button-secondary">Discord-Support</a>
               </div>
             </div>
           </div>

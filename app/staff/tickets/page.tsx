@@ -40,6 +40,7 @@ export default async function StaffTicketsPage({
               discordDisplayName: true,
             },
           },
+          guestAccess: { select: { displayName: true, discordContact: true } },
           assignee: { select: { name: true } },
         },
       },
@@ -75,7 +76,10 @@ export default async function StaffTicketsPage({
                     {category.tickets.map((ticket) => (
                       <tr key={ticket.id}>
                         <td><Link href={"/dashboard/tickets/" + ticket.id} className="font-semibold hover:text-[#efc76e]">#{ticket.number} · {ticket.subject}</Link></td>
-                        <td>{ticket.user.robloxDisplayName || ticket.user.robloxName || ticket.user.discordDisplayName || ticket.user.name}</td>
+                        <td>
+                          {ticket.user?.robloxDisplayName || ticket.user?.robloxName || ticket.user?.discordDisplayName || ticket.user?.name || ticket.guestAccess?.displayName || "Gast"}
+                          {!ticket.userId && <span className="ml-2 badge">Gast</span>}
+                        </td>
                         <td><StatusBadge status={ticket.status} /></td>
                         <td>{ticket.assignee?.name || "–"}</td>
                         <td className="text-[#858b90]">{formatDateTime(ticket.updatedAt)}</td>

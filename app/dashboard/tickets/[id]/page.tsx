@@ -32,6 +32,7 @@ export default async function TicketDetailPage({
     include: {
       category: true,
       user: { select: { name: true } },
+      guestAccess: { select: { displayName: true, discordContact: true } },
       assignee: { select: { name: true } },
       messages: {
         orderBy: { createdAt: "asc" },
@@ -42,6 +43,7 @@ export default async function TicketDetailPage({
               roleAssignments: { select: { role: { select: { permissions: { select: { permission: { select: { key: true } } } } } } } },
             },
           },
+          guestAccess: { select: { displayName: true } },
         },
       },
     },
@@ -72,12 +74,15 @@ export default async function TicketDetailPage({
           </div>
           <div className="grid gap-4 p-5 md:p-6">
             {messages.map((message) => {
-              const staffAuthor = message.author.roleAssignments.some((assignment) => assignment.role.permissions.some((item) => item.permission.key === "staff.access"));
+              const staffAuthor = Boolean(message.author?.roleAssignments.some((assignment) => assignment.role.permissions.some((item) => item.permission.key === "staff.access")));
+              const authorName = message.author?.name || message.guestAccess?.displayName || (message.authorKind === "SYSTEM" ? "DRP-System" : "Gast");
               return (
                 <article key={message.id} className={"max-w-[85%] rounded-2xl border p-4 " + (staffAuthor ? "border-[#d6aa4c]/20 bg-[#d6aa4c]/[0.06]" : "border-white/[0.07] bg-white/[0.025]")}>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <strong>{message.author.name}</strong>
+                    <strong>{authorName}</strong>
                     {staffAuthor && <span className="text-[#efc76e]">Staff</span>}
+                    {message.authorKind === "GUEST" && <span className="text-[#9ca3af]">Gast</span>}
+                    {message.authorKind === "SYSTEM" && <span className="text-[#9ca3af]">System</span>}
                     {message.internal && <span className="text-[#f28d8a]">Intern</span>}
                     <time className="text-[#686e72]">{formatDateTime(message.createdAt)}</time>
                   </div>
@@ -99,7 +104,8 @@ export default async function TicketDetailPage({
         <aside className="surface h-fit p-5 text-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">Details</p>
           <dl className="mt-5 grid gap-4">
-            <div><dt className="text-xs text-[#686e72]">Erstellt von</dt><dd className="mt-1 font-semibold">{ticket.user.name}</dd></div>
+            <div><dt className="text-xs text-[#686e72]">Erstellt von</dt><dd className="mt-1 font-semibold">{ticket.user?.name || ticket.guestAccess?.displayName || "Gast"}</dd></div>
+            {ticket.guestAccess?.discordContact && <div><dt className="text-xs text-[#686e72]">Discord-Kontakt</dt><dd className="mt-1 font-semibold">{ticket.guestAccess.discordContact}</dd></div>}
             <div><dt className="text-xs text-[#686e72]">Bearbeitung</dt><dd className="mt-1 font-semibold">{ticket.assignee?.name || "Noch nicht zugewiesen"}</dd></div>
             <div><dt className="text-xs text-[#686e72]">Zuletzt aktualisiert</dt><dd className="mt-1 font-semibold">{formatDateTime(ticket.updatedAt)}</dd></div>
           </dl>

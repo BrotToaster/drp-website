@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { checkErlcAction } from "@/app/actions/portal-v4";
 import { PortalShell } from "@/components/portal-shell";
+import { OperationsLivePanel, type OperationsEvent, type OperationsPlayer } from "@/components/operations-live-panel";
 import { ReliableActionForm } from "@/components/reliable-action-form";
 import { SubmitButton } from "@/components/submit-button";
 import { RelativeTime } from "@/components/relative-time";
@@ -35,6 +36,26 @@ export default async function StaffDashboardPage() {
   const average = snapshots.length ? Math.round(snapshots.reduce((value, item) => value + item.players, 0) / snapshots.length) : 0;
   const chart = snapshots.filter((_, index) => index % Math.max(1, Math.floor(snapshots.length / 24)) === 0).slice(-24);
   const stale = !state?.lastSuccessfulAt || Date.now() - state.lastSuccessfulAt.getTime() > 10 * 60 * 1000;
+  const rawPlayers = details.Players || [];
+  const linkedUsers = canSeeDetails && rawPlayers.length ? await prisma.user.findMany({
+    where: { robloxName: { in: rawPlayers.map((player) => player.Player || "").filter(Boolean), mode: "insensitive" } },
+    select: { robloxName: true, robloxDisplayName: true, discordDisplayName: true, discordUsername: true },
+  }) : [];
+  const identityByRoblox = new Map(linkedUsers.filter((item) => item.robloxName).map((item) => [item.robloxName!.toLocaleLowerCase("en"), [item.robloxDisplayName || item.robloxName, item.discordDisplayName || item.discordUsername].filter(Boolean).join(" · ")]));
+  const players: OperationsPlayer[] = rawPlayers.map((player, index) => ({
+    id: `${player.Player || "player"}-${index}`,
+    name: player.Player || "Unbekannt",
+    team: player.Team || "–",
+    callsign: player.Callsign || "–",
+    wanted: player.WantedStars ?? 0,
+    location: [player.Location?.StreetName, player.Location?.PostalCode].filter(Boolean).join(" · ") || "–",
+    identity: identityByRoblox.get((player.Player || "").toLocaleLowerCase("en")),
+  }));
+  const events: OperationsEvent[] = [
+    ...(details.JoinLogs || []).map((log, index) => ({ id: `join-${index}`, kind: "Join" as const, title: `${log.Player || "Spieler"} ${log.Join ? "ist beigetreten" : "hat den Server verlassen"}`, time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+    ...(details.CommandLogs || []).map((log, index) => ({ id: `command-${index}`, kind: "Command" as const, title: log.Player || "Spieler", detail: log.Command || "Befehl ohne Bezeichnung", time: log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+    ...(details.ModCalls || []).map((log, index) => ({ id: `modcall-${index}`, kind: "Mod-Call" as const, title: typeof log.Caller === "string" ? log.Caller : "Moderationsanfrage", detail: Object.entries(log).filter(([key]) => key !== "Caller" && key !== "Timestamp").slice(0, 3).map(([key, value]) => `${key}: ${String(value)}`).join(" · "), time: typeof log.Timestamp === "number" ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt" })),
+  ].slice(0, 150);
 
   return (
     <PortalShell authorization={authorization} title="Einsatzübersicht" description="Tickets, Serverauslastung und aktuelle ER:LC-Lage in einem Arbeitsbereich." section="staff">
@@ -64,10 +85,7 @@ export default async function StaffDashboardPage() {
         ].map(([label, result, href]) => <Link key={href} href={String(href)} className="surface surface-interactive p-5"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">{label}</p><p className="mt-3 text-3xl font-semibold">{result}</p><span className="mt-3 inline-block text-xs font-bold text-[#efc76e]">Öffnen →</span></Link>)}</section>
       </div>
 
-      {canSeeDetails && <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="surface overflow-hidden"><div className="border-b border-white/[0.07] p-5"><h2 className="font-semibold">Spieler im Einsatz</h2><p className="mt-1 text-xs text-[#777d81]">Live-Daten werden nicht historisch gespeichert.</p></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Spieler</th><th>Team</th><th>Callsign</th><th>Wanted</th><th>Position</th></tr></thead><tbody>{(details.Players || []).map((player, index) => <tr key={(player.Player || "player") + index}><td>{player.Player || "Unbekannt"}</td><td>{player.Team || "–"}</td><td>{player.Callsign || "–"}</td><td>{player.WantedStars ?? 0}</td><td>{[player.Location?.StreetName, player.Location?.PostalCode].filter(Boolean).join(" · ") || "–"}</td></tr>)}</tbody></table>{!details.Players?.length && <p className="p-5 text-sm text-[#777d81]">Keine Spieler-Details verfügbar.</p>}</div></section>
-        <section className="surface p-5"><h2 className="font-semibold">Letzte Serverereignisse</h2><div className="mt-4 grid gap-3">{(details.JoinLogs || []).slice(0, 6).map((log, index) => <div key={index} className="rounded-xl border border-white/[0.07] p-3"><p className="text-sm">{log.Player || "Spieler"} {log.Join ? "ist beigetreten" : "hat den Server verlassen"}</p><p className="mt-1 text-[10px] text-[#777d81]">{log.Timestamp ? formatDateTime(new Date(log.Timestamp * 1000)) : "Zeit unbekannt"}</p></div>)}{!details.JoinLogs?.length && <p className="text-sm text-[#777d81]">Keine aktuellen Ereignisse vorhanden.</p>}</div></section>
-      </div>}
+      {canSeeDetails && <OperationsLivePanel players={players} events={events} />}
     </PortalShell>
   );
 }

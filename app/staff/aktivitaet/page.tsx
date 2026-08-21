@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatDateTime } from "@/lib/site";
 import { recommendationLabel } from "@/lib/team-workflow";
+import { getHomepageSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,15 @@ export default async function TeamActivityPage() {
   const { user, authorization } = await requirePermission("team_activity.view_self");
   const canViewAll = hasPermission(authorization, "team_activity.view_all");
   const canReview = hasPermission(authorization, "team_activity.review");
-  const [reviews, selfMember, ranks] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [reviews, selfMember, ranks, homepage, visibleLeaves, lastMemberSync] = await Promise.all([
     prisma.teamWeeklyReview.findMany({ include: { entries: { orderBy: { sortOrder: "asc" } }, signatures: { orderBy: { sortOrder: "asc" } }, results: { where: canViewAll ? undefined : { member: { userId: user.id } }, include: { member: true, reviewer: { select: { name: true } } }, orderBy: [{ decision: "asc" }, { member: { displayName: "asc" } }] } }, orderBy: { weekStart: "desc" }, take: 12 }),
     prisma.melonlyMember.findUnique({ where: { userId: user.id }, include: { strikes: { where: { status: "ACTIVE" } }, rankBlocks: { where: { liftedAt: null, endsAt: { gt: new Date() } } } } }),
     prisma.discordTeamRank.findMany({ where: { active: true }, include: { discordRole: true, nextDiscordRole: true }, orderBy: { sortOrder: "desc" } }),
+    getHomepageSettings(),
+    prisma.melonlyLeave.findMany({ where: { approved: true, endsOn: { gte: today }, ...(canViewAll ? {} : { member: { userId: user.id } }) }, include: { member: { select: { displayName: true } } }, orderBy: [{ startsOn: "asc" }, { member: { displayName: "asc" } }], take: 12 }),
+    prisma.melonlyMember.findFirst({ orderBy: { lastSyncedAt: "desc" }, select: { lastSyncedAt: true } }),
   ]);
   const discordIds = [...new Set([...reviews.flatMap((review) => review.results.map((result) => result.member.discordId).filter((id): id is string => Boolean(id))), ...(selfMember?.discordId ? [selfMember.discordId] : [])])];
   const snapshots = await prisma.discordMemberSnapshot.findMany({ where: canReview ? undefined : { discordId: { in: discordIds } }, orderBy: { lastSyncedAt: "desc" }, take: canReview ? 2500 : 500 });
@@ -59,8 +65,11 @@ export default async function TeamActivityPage() {
   const snapshotMap = new Map(uniqueSnapshots.map((snapshot) => [snapshot.discordId, snapshot]));
   const getRank = (discordId?: string | null) => resolveDiscordRank(jsonRoleIds(discordId ? snapshotMap.get(discordId)?.roleIds : []), ranks);
   const selfRank = getRank(selfMember?.discordId);
+  const melonlyStale = !lastMemberSync || Date.now() - lastMemberSync.lastSyncedAt.getTime() > 30 * 60 * 1000;
 
   return <PortalShell authorization={authorization} title="Teamaktivität" description={canViewAll ? "Discord-Ränge, Melonly-Zeiten und den Weekly Insider in einem verlässlichen Workflow prüfen." : "Deine Wochenzeiten, LoAs und Teamstatus im Überblick."} section="staff">
+    <section className="surface mb-6 flex flex-wrap items-center justify-between gap-5 p-5"><div><div className="flex flex-wrap items-center gap-3"><h2 className="font-semibold">Melonly-Spiegel</h2><span className={melonlyStale ? "badge" : "badge badge-success"}>{melonlyStale ? "Abgleich veraltet" : "Aktuell"}</span></div><p className="mt-2 text-xs leading-6 text-[#7d8489]">Letzter Abgleich: {lastMemberSync ? formatDateTime(lastMemberSync.lastSyncedAt) : "noch nie"}. Schichten und LoAs werden ausschließlich in Melonly geändert.</p></div><a className="button button-secondary" href={homepage.melonlyUrl} target="_blank" rel="noreferrer">In Melonly öffnen ↗</a></section>
+    <section className="surface mb-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] p-5"><div><h2 className="font-semibold">Aktuelle & geplante LoAs</h2><p className="mt-1 text-xs text-[#777d81]">Nur genehmigte, von Melonly gespiegelte Abwesenheiten.</p></div><span className="badge">{visibleLeaves.length} Einträge</span></div><div className="grid gap-px bg-white/[.07] md:grid-cols-2 xl:grid-cols-3">{visibleLeaves.map((leave) => <article key={leave.id} className="bg-[#111317] p-5"><p className="font-semibold">{leave.member.displayName}</p><p className="mt-2 text-sm text-[#a0a6aa]">{formatDate(leave.startsOn)} – {formatDate(leave.endsOn)}</p><p className="mt-2 text-[10px] font-bold uppercase tracking-[.12em] text-[#70767b]">{leave.startsOn <= today ? "Aktuell abwesend" : "Geplant"}</p></article>)}{!visibleLeaves.length && <p className="bg-[#111317] p-6 text-sm text-[#777d81] md:col-span-2 xl:col-span-3">Keine aktuellen oder geplanten LoAs vorhanden.</p>}</div></section>
     {selfMember && <section className="mb-6 grid gap-4 sm:grid-cols-3"><div className="surface p-5"><p className="text-xs text-[#777d81]">Discord-Rang</p><p className="mt-2 font-semibold">{selfRank.rank?.shortName || "Nicht konfiguriert"}</p>{selfRank.conflicts.length > 0 && <p className="mt-2 text-xs text-[#f28d8a]">Mehrere Rangrollen erkannt</p>}</div><div className="surface p-5"><p className="text-xs text-[#777d81]">Wochenziel</p><p className="mt-2 font-semibold">{selfRank.rank ? `${Math.floor(selfRank.rank.weeklyTargetMinutes / 60)} Std. ${selfRank.rank.weeklyTargetMinutes % 60} Min.` : "–"}</p></div><div className="surface p-5"><p className="text-xs text-[#777d81]">Aktiver Status</p><p className="mt-2 font-semibold">{selfMember.rankBlocks.length ? "Up-Rank-Sperre" : `${selfMember.strikes.length} Strike(s)`}</p></div></section>}
     {canReview && <ReliableActionForm action={generateWeeklyReviewAction} className="surface mb-6 flex flex-wrap items-center justify-between gap-4 p-5"><div><h2 className="font-semibold">Letzte abgeschlossene Woche auswerten</h2><p className="mt-1 text-xs text-[#858b90]">Discord liefert den Rang; Melonly liefert ausschließlich Zeit, Schichten und LoA. Bereits entschiedene Einträge bleiben erhalten.</p></div><SubmitButton>Auswertung erstellen</SubmitButton></ReliableActionForm>}
     {canReview && <details className="surface mb-6 p-5"><summary className="cursor-pointer font-semibold text-[#efc76e]">Wichtige Infos für das Verfassen eines Weekly-Insider</summary><pre spellCheck={false} className="mt-4 whitespace-pre-wrap text-xs leading-6 text-[#aeb3b6]">{weeklyHelp}</pre></details>}

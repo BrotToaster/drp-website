@@ -3,8 +3,17 @@ import { contentNodeSchema } from "@/lib/content";
 
 export const ticketSchema = z.object({
   subject: z.string().trim().min(5).max(100),
+  category: z.enum(["CONTACT", "TECHNICAL", "OWNERSHIP"]),
+  message: z.string().trim().min(20).max(4000),
+});
+
+export const guestTicketSchema = z.object({
+  displayName: z.string().trim().min(2).max(80),
+  discordContact: z.string().trim().max(100).optional(),
+  subject: z.string().trim().min(5).max(100),
   category: z.enum(["CONTACT", "TECHNICAL"]),
   message: z.string().trim().min(20).max(4000),
+  website: z.string().max(0),
 });
 
 export const ticketMessageSchema = z.object({

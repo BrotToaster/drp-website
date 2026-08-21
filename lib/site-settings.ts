@@ -48,8 +48,10 @@ export async function getHomepageSettings() {
       departments,
       discordUrl: typeof rawLinks.discordUrl === "string" ? rawLinks.discordUrl : siteConfig.discordUrl,
       robloxUrl: typeof rawLinks.robloxUrl === "string" ? rawLinks.robloxUrl : siteConfig.robloxUrl,
+      discordSupportUrl: typeof rawLinks.discordSupportUrl === "string" ? rawLinks.discordSupportUrl : (typeof rawLinks.discordUrl === "string" ? rawLinks.discordUrl : siteConfig.discordUrl),
+      melonlyUrl: typeof rawLinks.melonlyUrl === "string" ? rawLinks.melonlyUrl : "https://melonly.xyz/dashboard",
     };
   } catch {
-    return { departments: defaultDepartments, discordUrl: siteConfig.discordUrl, robloxUrl: siteConfig.robloxUrl };
+    return { departments: defaultDepartments, discordUrl: siteConfig.discordUrl, robloxUrl: siteConfig.robloxUrl, discordSupportUrl: siteConfig.discordUrl, melonlyUrl: "https://melonly.xyz/dashboard" };
   }
 }

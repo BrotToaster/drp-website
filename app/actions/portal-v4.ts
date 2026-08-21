@@ -152,8 +152,10 @@ export async function savePublicLinksAction(_previous: ActionResult, formData: F
     const parsed = z.object({
       discordUrl: z.string().url().refine((url) => url.startsWith("https://")),
       robloxUrl: z.string().url().refine((url) => url.startsWith("https://")),
-    }).safeParse({ discordUrl: value(formData, "discordUrl"), robloxUrl: value(formData, "robloxUrl") });
-    if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte gib zwei gültige HTTPS-Links ein." };
+      discordSupportUrl: z.string().url().refine((url) => url.startsWith("https://")),
+      melonlyUrl: z.string().url().refine((url) => url.startsWith("https://")),
+    }).safeParse({ discordUrl: value(formData, "discordUrl"), robloxUrl: value(formData, "robloxUrl"), discordSupportUrl: value(formData, "discordSupportUrl"), melonlyUrl: value(formData, "melonlyUrl") });
+    if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte gib für alle Ziele gültige HTTPS-Links ein." };
     await prisma.$transaction([
       prisma.siteSetting.upsert({ where: { key: "public.links" }, update: { value: parsed.data }, create: { key: "public.links", value: parsed.data } }),
       prisma.auditLog.create({ data: { actorId: user.id, action: "PUBLIC_LINKS_UPDATED", entityType: "SiteSetting", entityId: "public.links" } }),

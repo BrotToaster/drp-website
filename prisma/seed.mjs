@@ -109,11 +109,13 @@ async function main() {
   for (const data of [
     { key: "TECHNICAL", label: "Technischer Support", description: "Technische Probleme mit Website, Discord oder Serverzugang", sortOrder: 10 },
     { key: "CONTACT", label: "Kontaktaufnahme", description: "Allgemeine Kontaktaufnahme mit dem DRP-Team", sortOrder: 20 },
+    { key: "OWNERSHIP", label: "Ownership", description: "Vertrauliche Kontaktaufnahme mit Administration und Ownership", sortOrder: 30 },
   ]) {
     categories.push(await prisma.ticketCategory.upsert({ where: { key: data.key }, update: data, create: data }));
   }
   for (const roleKey of ["SUPPORTER", "MODERATOR", "ADMIN", "OWNER"]) {
     for (const category of categories) {
+      if (category.key === "OWNERSHIP" && !["ADMIN", "OWNER"].includes(roleKey)) continue;
       const role = roles.get(roleKey);
       if (!role) continue;
       await prisma.roleTicketCategoryAccess.upsert({

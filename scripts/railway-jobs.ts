@@ -66,7 +66,8 @@ async function retentionCleanup() {
     const discordSnapshots = await tx.discordMemberSnapshot.deleteMany({ where: { lastSyncedAt: { lt: beforeDays(retention.discordSnapshotDays) } } });
     const erlcSnapshots = await tx.erlcMetricSnapshot.deleteMany({ where: { capturedAt: { lt: beforeDays(30) } } });
     const oldRuns = await tx.scheduledJobRun.deleteMany({ where: { startedAt: { lt: beforeDays(90) } } });
-    return { tickets: tickets.count, auditLogs: auditLogs.count, discordSnapshots: discordSnapshots.count, erlcSnapshots: erlcSnapshots.count, oldRuns: oldRuns.count };
+    const guestRateLimits = await tx.guestTicketRateLimit.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+    return { tickets: tickets.count, auditLogs: auditLogs.count, discordSnapshots: discordSnapshots.count, erlcSnapshots: erlcSnapshots.count, oldRuns: oldRuns.count, guestRateLimits: guestRateLimits.count };
   });
 }
 
