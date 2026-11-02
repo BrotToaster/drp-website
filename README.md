@@ -32,6 +32,14 @@ Die vorhandenen Startdateien bleiben erhalten: `Start-DRP.bat` für die optimier
 
 Die lokale Entscheidungsvorschau verwendet eine eigene Datenbank und standardmäßig Port 3108. Sie wird über `node scripts/preview-server.mjs runtime/preview.env` gestartet; siehe Hosting-Anleitung. Ein öffentlicher passwortloser Owner-Demozugang ist nicht vorgesehen.
 
+`Backup-DRP.bat` beziehungsweise `npm run db:backup` sichert die lokale Bestandsdatenbank im Verzeichnis `backups`. Eine Sicherung wird zunächst in eine neue Datenbank wiederhergestellt:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 -Action Restore -BackupFile backups/drp_DATUM.dump -RestoreName drp_restore_pruefung
+```
+
+Den tatsächlichen Dateinamen einsetzen. Der Wiederherstellungsbefehl überschreibt keine bestehende Datenbank und stellt die laufende Website nicht automatisch um. Sicherungen können personenbezogene Daten enthalten und gehören ausschließlich in eine private, geschützte Ablage.
+
 ## Betreiber und Datenschutz
 
 Die frühere Impressumsadresse führt zum Verantwortlichen-Abschnitt der Datenschutzerklärung. Tatsächliche Betreiber- und Kontaktangaben bleiben erforderlich, soweit die einschlägigen Informationspflichten sie verlangen. Musterangaben sind als solche gekennzeichnet. Ein Betreiber in der Schweiz ist keine pauschale rechtliche Ausnahme für jedes Angebot.
