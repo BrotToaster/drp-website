@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { contentNodeSchema } from "@/lib/content";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +16,7 @@ function content(value: unknown): JSONContent {
   return parsed.success ? parsed.data : { type: "doc", content: [{ type: "paragraph" }] };
 }
 
-export async function getPublishedRules(): Promise<RuleView[]> {
+async function loadPublishedRules(): Promise<RuleView[]> {
   try {
     const rules = await prisma.rule.findMany({
       where: { published: true },
@@ -56,7 +57,7 @@ export async function getPublishedRules(): Promise<RuleView[]> {
   }
 }
 
-export async function getPublishedNews(): Promise<NewsView[]> {
+async function loadPublishedNews(): Promise<NewsView[]> {
   try {
     const posts = await prisma.newsPost.findMany({
       where: { published: true },
@@ -117,3 +118,6 @@ export async function getPublicTeam(): Promise<TeamView[]> {
     return demoTeam;
   }
 }
+
+export const getPublishedRules = cache(loadPublishedRules);
+export const getPublishedNews = cache(loadPublishedNews);

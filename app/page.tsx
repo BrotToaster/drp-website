@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ContentImage } from "@/components/content-image";
+import { homeShareDescription, publicMetadata } from "@/lib/metadata";
+export const metadata = publicMetadata("Deutschland Roleplay", homeShareDescription, "/");
 import { CinematicMapCard } from "@/components/cinematic-map-card";
 import { StatusPill } from "@/components/status-pill";
 import { NewsCard } from "@/components/news-card";
@@ -8,6 +11,10 @@ import { getPublishedNews, getPublishedRules } from "@/lib/data";
 import { getPublicServerStatus } from "@/lib/erlc";
 import { getOfficialErlcMapUrl } from "@/lib/erlc-map";
 import { getHomepageSettings } from "@/lib/site-settings";
+import { HomeMotion } from "@/components/home-motion";
+import { SpotlightCard } from "@/components/spotlight-card";
+import { InteractiveLink } from "@/components/interactive-link";
+import { InterfaceIcon } from "@/components/interface-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -22,87 +29,78 @@ export default async function HomePage() {
   ]);
 
   return (
-    <>
-      <section className="relative overflow-hidden border-b border-white/[0.07]">
-        <div className="container-shell grid min-h-[760px] items-center gap-14 py-20 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="animate-in relative z-10">
-            <StatusPill />
+    <div className="drp-home" data-drp-home>
+      <HomeMotion />
+      <section className="home-hero relative overflow-hidden border-b border-[var(--line)]">
+        <div className="container-shell home-hero-layout">
+          <div className="home-hero-copy">
             <h1 className="display-title">
               Dein Einsatz.<br />
               <em>Deine Geschichte.</em>
             </h1>
             <p className="body-large max-w-xl">
-              Erlebe durchdachtes deutsches Roleplay in Liberty County – mit klaren Regeln,
-              starken Fraktionen und einer Community, die Qualität ernst nimmt.
+              Deutsches Roleplay in Liberty County. Berufe, Freizeit und gemeinsame
+              Events – auf Discord findest du den Serverzugang und Hilfe im Spiel.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <a href={homepage.discordUrl} target="_blank" rel="noreferrer" className="button button-primary">
-                Community beitreten <span aria-hidden="true">↗</span>
-              </a>
-              <Link href="/server" className="button button-secondary">
-                Server entdecken
+            <div className="home-hero-actions">
+              <InteractiveLink href={homepage.discordUrl} target="_blank" rel="noreferrer">Auf Discord beitreten</InteractiveLink>
+              <Link href="/server" className="hero-secondary-link">
+                Server und Voraussetzungen ansehen
               </Link>
             </div>
-            <div className="mt-12 flex flex-wrap gap-x-10 gap-y-4 text-xs text-[#858b90]">
-              <span><strong className="mr-2 text-white">24/7</strong> Community-Support</span>
-              <span><strong className="mr-2 text-white">100%</strong> Fair Play</span>
+            <div className="home-hero-status"><StatusPill /></div>
+            <div className="home-hero-facts">
+              <span>Kostenloses Communityportal</span>
+              <span>Regelwerk und Kontakt frei zugänglich</span>
             </div>
           </div>
 
-          <div className="animate-in relative mx-auto w-full max-w-[480px]" style={{ animationDelay: "120ms" }}>
-            <div className="absolute -inset-12 rounded-full bg-[#d6aa4c]/[0.06] blur-3xl" />
+          <div className="home-map-stage">
             <CinematicMapCard mapUrl={erlcMapUrl} status={status} />
           </div>
         </div>
       </section>
 
-      <section className="section-space border-b border-white/[0.07] bg-white/[0.012]">
+      <section id="einstieg" className="section-space border-b border-[var(--line)] bg-[var(--surface-soft)]">
         <div className="container-shell">
-          <SectionHeading eyebrow="Dein Einstieg" title="In drei Schritten ins Roleplay." copy="Alles, was du vor deinem ersten Einsatz brauchst – klar und ohne Umwege." />
-          <ol className="mt-12 grid gap-4 lg:grid-cols-3">
+          <SectionHeading title="In drei Schritten ins Roleplay." copy="Alles, was du vor deinem ersten Einsatz brauchst – klar und ohne Umwege." />
+          <ol className="join-steps mt-12 grid gap-6 lg:grid-cols-3">
             {[
               ["01", "Community beitreten", "Komm auf den Discord, lies die Hinweise und lerne die Community kennen.", homepage.discordUrl],
               ["02", "Regelwerk verstehen", "Prüfe die aktuellen Regeln und bestätige sie später in deinem DRP-Konto.", "/regelwerk"],
               ["03", "Server betreten", "Sieh den Live-Status, verbinde dich mit ER:LC und starte deine Geschichte.", "/server"],
-            ].map(([number, title, copy, href]) => <li key={number} className="surface surface-interactive p-7"><span className="display-font text-3xl font-bold text-[#f2c14e]">{number}</span><h3 className="mt-8 text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-7 text-[#90969a]">{copy}</p>{href.startsWith("http") ? <a href={href} target="_blank" rel="noreferrer" className="mt-6 inline-block text-sm font-bold text-[#f2c14e]">Öffnen ↗</a> : <Link href={href} className="mt-6 inline-block text-sm font-bold text-[#f2c14e]">Öffnen →</Link>}</li>)}
+            ].map(([number, title, copy, href]) => <li key={number} className="join-step"><span className="display-font text-3xl font-bold text-[var(--accent-ink)]">{number}</span><h3 className="mt-6 text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-7 text-[var(--muted)]">{copy}</p>{href.startsWith("http") ? <a href={href} target="_blank" rel="noreferrer" className="mt-6 inline-block text-sm font-bold text-[var(--accent-ink)]">Öffnen ↗</a> : <Link href={href} className="mt-6 inline-block text-sm font-bold text-[var(--accent-ink)]">Öffnen →</Link>}</li>)}
           </ol>
         </div>
       </section>
 
-      <section className="section-space">
+      <section className="home-departments section-space">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Deine Rolle"
             title="Wo beginnt deine Geschichte?"
             copy="Wähle deinen Weg, entwickle deinen Charakter und werde Teil eines lebendigen Liberty County."
           />
-          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="department-grid">
             {homepage.departments.map((department, index) => (
-              <article key={department.code + index} className="surface surface-interactive group overflow-hidden">
-                <div className="h-36 border-b border-white/[0.07] bg-[#0b0e11] bg-cover bg-center" style={department.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(9,11,13,.55), transparent), url("${department.imageUrl}")` } : undefined}>
-                  {!department.imageUrl && <div className="grid h-full place-items-center text-4xl font-semibold text-[#d6aa4c]/25">{department.code.slice(0, 2)}</div>}
-                </div>
-                <div className="p-7">
-                  <div className="flex items-start justify-between"><span className="badge badge-gold">{department.code}</span><span className="text-xs text-[#62686c]">{String(index + 1).padStart(2, "0")}</span></div>
-                  <h3 className="mt-7 text-2xl font-semibold tracking-[-0.03em]">{department.name}</h3>
-                  <p className="mt-3 max-w-md text-sm leading-7 text-[#90969a]">{department.copy}</p>
-                  {department.targetUrl && <a href={department.targetUrl} target="_blank" rel="noreferrer" className="mt-5 inline-block text-sm font-bold text-[#efc76e]">{department.linkLabel || "Mehr erfahren"} ↗</a>}
-                </div>
-              </article>
+              <SpotlightCard key={department.code + index} className="department-card group overflow-hidden">
+                {department.imageUrl ? <div className="department-image"><ContentImage src={department.imageUrl} alt={`Einblick in ${department.name}`} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover" /></div> : <InterfaceIcon className="department-icon" name={/fire|feuer|rett/i.test(department.name + department.code) ? "fire" : /pol|sheriff|sicher/i.test(department.name + department.code) ? "shield" : "road"} />}
+                <h3>{department.name}</h3>
+                <p>{department.copy}</p>
+                {department.targetUrl && <a href={department.targetUrl} target="_blank" rel="noreferrer" className="text-[var(--accent-ink)]">{department.linkLabel || "Mehr erfahren"} ↗</a>}
+              </SpotlightCard>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="border-y border-white/[0.07] bg-white/[0.015] section-space">
+      <section className="border-y border-[var(--line)] bg-[var(--surface-soft)] section-space">
         <div className="container-shell grid gap-14 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
           <SectionHeading
-            eyebrow="Klare Standards"
             title="Gutes Roleplay beginnt mit Fairness."
-            copy="Unser Regelwerk schützt kreative Geschichten und sorgt dafür, dass jede Situation für alle Beteiligten nachvollziehbar bleibt."
+            copy="Klare Regeln und ein respektvoller Umgang gehören bei DRP zusammen. Bei Fragen zum Spiel oder zur Community hilft dir unser Team auf Discord."
           />
           <div>
-            <RuleRotator rules={rules} />
+            <RuleRotator rules={rules.map(({ id, slug, category, title }) => ({ id, slug, category, title }))} />
             <div className="mt-4"><ArrowLink href="/regelwerk">Vollständiges Regelwerk lesen</ArrowLink></div>
           </div>
         </div>
@@ -111,7 +109,7 @@ export default async function HomePage() {
       <section className="section-space">
         <div className="container-shell">
           <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading eyebrow="Neuigkeiten" title="Was neu bei DRP ist." />
+            <SectionHeading title="Was neu bei DRP ist." />
             <ArrowLink href="/news">Alle Neuigkeiten</ArrowLink>
           </div>
           <div className="mt-12 grid gap-4 lg:grid-cols-3">
@@ -123,12 +121,10 @@ export default async function HomePage() {
       <section className="pb-24">
         <div className="container-shell">
           <div className="drp-system-cta surface relative overflow-hidden px-6 py-16 md:px-16 md:py-20">
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="relative ml-auto max-w-2xl text-center lg:text-left">
-              <span className="eyebrow">DRP-System</span>
-              <h2 className="section-title mt-5">Website, Konto und Staff-Werkzeuge an einem Ort.</h2>
+            <div className="relative mx-auto max-w-2xl text-center">
+              <h2 className="section-title">Website, Konto und Staff-Werkzeuge an einem Ort.</h2>
               <p className="body-large mt-5">Öffne dein DRP-Konto für Profil, Regelbestätigung und Website-Tickets. Operative Melonly-Aufgaben bleiben klar verlinkt.</p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link href="/dashboard" className="button button-primary">DRP-System öffnen</Link>
                 <a href={homepage.discordSupportUrl} target="_blank" rel="noreferrer" className="button button-secondary">Discord-Support</a>
               </div>
@@ -136,6 +132,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

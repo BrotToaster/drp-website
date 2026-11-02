@@ -41,7 +41,7 @@ export default async function StaffDocumentsPage({ searchParams }: { searchParam
 
   return (
     <PortalShell authorization={authorization} title="Interne Dokumente" description="Durchsuchbare Arbeitsunterlagen, Anleitungen und Dateien für das DRP-Team." section="staff">
-      {creatable.length > 0 && <details className="surface mb-6 p-6"><summary className="cursor-pointer font-semibold text-[#efc76e]">Neues Dokument erstellen</summary>
+      {creatable.length > 0 && <details className="surface mb-6 p-6"><summary className="cursor-pointer font-semibold text-[var(--accent-ink)]">Neues Dokument erstellen</summary>
         <ReliableActionForm action={saveInternalDocumentAction} resetOnSuccess className="mt-6 grid gap-4">
           <div className="grid gap-4 md:grid-cols-2"><label className="field-label">Titel<input className="field" name="title" minLength={3} required /></label><label className="field-label">Kategorie<select className="field" name="categoryId" required>{creatable.map((category) => <option key={category.id} value={category.id}>{category.title}</option>)}</select></label></div>
           <label className="field-label">Kurzbeschreibung<textarea className="field min-h-20" name="summary" maxLength={500} /></label>
@@ -58,8 +58,8 @@ export default async function StaffDocumentsPage({ searchParams }: { searchParam
       </form>
       <div className="mb-4 flex gap-2 text-xs"><Link className={!query.archived ? "badge badge-gold" : "badge"} href="/staff/dokumente">Aktiv</Link><Link className={query.archived === "1" ? "badge badge-gold" : "badge"} href="/staff/dokumente?archived=1">Archiv</Link></div>
       <div className="grid gap-4 md:grid-cols-2">
-        {filtered.map((document) => <Link key={document.id} href={`/staff/dokumente/${document.slug}`} className="surface surface-interactive min-w-0 p-6"><div className="flex items-center justify-between gap-3"><span className="badge badge-gold">{document.category.title}</span><span className="text-xs text-[#6f7579]">Version {document.revisions[0]?.version || 0}</span></div><h2 className="mt-5 break-words text-xl font-semibold">{document.title}</h2><p className="mt-2 line-clamp-3 break-words text-sm leading-6 text-[#8d9397]">{document.summary || "Keine Kurzbeschreibung vorhanden."}</p><p className="mt-5 text-xs text-[#656b70]">Aktualisiert {formatDateTime(document.updatedAt)}</p></Link>)}
-        {!filtered.length && <div className="surface p-8 text-sm text-[#8d9397] md:col-span-2">Keine passenden Dokumente gefunden.</div>}
+        {filtered.map((document) => <Link key={document.id} href={`/staff/dokumente/${document.slug}`} className="surface surface-interactive min-w-0 p-6"><div className="flex items-center justify-between gap-3"><span className="badge badge-gold">{document.category.title}</span><span className="text-xs text-[var(--muted)]">Version {document.revisions[0]?.version || 0}</span></div><h2 className="mt-5 break-words text-xl font-semibold">{document.title}</h2><p className="mt-2 line-clamp-3 break-words text-sm leading-6 text-[var(--muted)]">{document.summary || "Keine Kurzbeschreibung vorhanden."}</p><p className="mt-5 text-xs text-[var(--muted)]">Aktualisiert {formatDateTime(document.updatedAt)}</p></Link>)}
+        {!filtered.length && <div className="surface p-8 text-sm text-[var(--muted)] md:col-span-2">Keine passenden Dokumente gefunden.</div>}
       </div>
     </PortalShell>
   );

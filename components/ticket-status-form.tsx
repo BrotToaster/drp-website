@@ -1,7 +1,7 @@
 "use client";
 
 import type { TicketStatus } from "@prisma/client";
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { updateTicketStatusAction } from "@/app/actions/staff";
 import { ensureMutationId, initialActionResult, type ActionResult } from "@/lib/action-result";
 
@@ -32,10 +32,25 @@ export function TicketStatusForm({
   const previousStatus = useRef(status);
   const handledMutation = useRef<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const normalizedAction = useCallback(async (previous: ActionResult, formData: FormData) => {
-    return ensureMutationId(await updateTicketStatusAction(previous, formData));
-  }, []);
-  const [state, action, pending] = useActionState(normalizedAction, initialActionResult);
+  const [state, setState] = useState<ActionResult>(initialActionResult);
+  const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting.current) return;
+    const formData = new FormData(event.currentTarget);
+    previousStatus.current = currentStatus;
+    submitting.current = true;
+    setPending(true);
+    try {
+      setState(ensureMutationId(await updateTicketStatusAction(state, formData)));
+    } catch {
+      setState(ensureMutationId({ ok: false, code: "SERVER", message: "Der Status konnte nicht bestätigt werden. Lade das Ticket neu, bevor du es erneut änderst." }));
+    } finally {
+      submitting.current = false;
+      setPending(false);
+    }
+  }
   useEffect(() => setCurrentStatus(status), [status]);
   useEffect(() => {
     if (!state.message || !state.mutationId || handledMutation.current === state.mutationId) return;
@@ -52,16 +67,13 @@ export function TicketStatusForm({
   }, [state]);
 
   const nextStates = transitions[currentStatus];
-  if (!nextStates.length) return <span className="text-xs text-[#666c70]">Abgeschlossen</span>;
+  if (!nextStates.length) return <span className="text-xs text-[var(--muted)]">Abgeschlossen</span>;
   return (
     <form
-      action={action}
+      method="post"
       className="grid gap-2"
-      onSubmit={(event) => {
-        const next = new FormData(event.currentTarget).get("status") as TicketStatus | null;
-        previousStatus.current = currentStatus;
-        if (next && transitions[currentStatus].includes(next)) setCurrentStatus(next);
-      }}
+      onSubmit={submit}
+      aria-busy={pending}
     >
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="expectedStatus" value={currentStatus} />
@@ -73,7 +85,7 @@ export function TicketStatusForm({
           {pending ? <><span className="submit-spinner" /> Wird aktualisiert …</> : "Setzen"}
         </button>
       </div>
-      {state.message && !state.ok && <p role="alert" className="max-w-64 text-xs text-[#f28d8a]">{state.message}</p>}
+      {state.message && !state.ok && <p role="alert" className="max-w-64 text-xs text-[var(--danger-ink)]">{state.message}</p>}
       {state.message && state.ok && showSuccess && <div className="mutation-toast mutation-toast-success" role="status" aria-live="polite">{state.message}</div>}
     </form>
   );

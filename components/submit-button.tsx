@@ -16,8 +16,9 @@ export function SubmitButton({
   name?: string;
   value?: string;
 }) {
-  const { pending } = useFormStatus();
-  const { uploadBusy } = useFormRuntime();
+  const { pending: nativePending } = useFormStatus();
+  const { uploadBusy, submitting } = useFormRuntime();
+  const pending = submitting ?? nativePending;
   const busy = pending || uploadBusy;
   return (
     <button

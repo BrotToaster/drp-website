@@ -19,13 +19,13 @@ export default async function DiscordAdminPage({ searchParams }: { searchParams:
   ]);
   return (
     <PortalShell authorization={authorization} title="Discord-Integration" description="Synchronisierte Discord-Rollen mit Website-Rollen verknüpfen." section="admin">
-      {(query.saved || query.error) && <p className={`mb-5 rounded-xl p-4 text-sm ${query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]"}`}>{query.error === "permissions" ? "Zum Ändern der Zuordnungen werden Rollen- und Discord-Verwaltungsrechte benötigt." : query.error ? "Die Discord-Zuordnung konnte nicht gespeichert werden." : "Discord-Zuordnung wurde gespeichert."}</p>}
-      {!canManageMappings && <p className="mb-5 rounded-xl border border-[#f2c14e]/20 bg-[#f2c14e]/[0.06] p-4 text-sm text-[#d9c98f]">Du kannst die synchronisierten Discord-Rollen ansehen. Zum Ändern einer Website-Zuordnung werden zusätzlich Rechte zur Rollenverwaltung benötigt.</p>}
+      {(query.saved || query.error) && <p className={`mb-5 rounded-xl p-4 text-sm ${query.error ? "bg-[#ef6f6c]/10 text-[var(--danger-ink)]" : "bg-[#57c98c]/10 text-[var(--success-ink)]"}`}>{query.error === "permissions" ? "Zum Ändern der Zuordnungen werden Rollen- und Discord-Verwaltungsrechte benötigt." : query.error ? "Die Discord-Zuordnung konnte nicht gespeichert werden." : "Discord-Zuordnung wurde gespeichert."}</p>}
+      {!canManageMappings && <p className="mb-5 rounded-xl border border-[var(--accent-line)] bg-[var(--accent)]/[0.06] p-4 text-sm text-[var(--accent-ink)]">Du kannst die synchronisierten Discord-Rollen ansehen. Zum Ändern einer Website-Zuordnung werden zusätzlich Rechte zur Rollenverwaltung benötigt.</p>}
       <div className="surface mb-5 p-5">
         <h2 className="font-semibold">Letzter Synchronisierungsstatus</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {receipts.map((receipt) => <span className="badge" key={receipt.id}>{receipt.kind} · {formatDateTime(receipt.createdAt)}</span>)}
-          {!receipts.length && <span className="text-sm text-[#777d81]">Noch kein Bot-Abgleich empfangen.</span>}
+          {!receipts.length && <span className="text-sm text-[var(--muted)]">Noch kein Bot-Abgleich empfangen.</span>}
         </div>
       </div>
       <section className="surface overflow-hidden">
@@ -52,7 +52,7 @@ export default async function DiscordAdminPage({ searchParams }: { searchParams:
                   </tr>
                 );
               })}
-              {!discordRoles.length && <tr><td colSpan={6} className="py-12 text-center text-[#777d81]">Der Bot hat noch keine Discord-Rollen synchronisiert.</td></tr>}
+              {!discordRoles.length && <tr><td colSpan={6} className="py-12 text-center text-[var(--muted)]">Der Bot hat noch keine Discord-Rollen synchronisiert.</td></tr>}
             </tbody>
           </table>
         </div>

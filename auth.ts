@@ -8,8 +8,11 @@ import { applyDiscordRoleMappings } from "@/lib/discord-sync";
 import { prisma } from "@/lib/prisma";
 import { ensureBaseRoleAssignments } from "@/lib/role-assignments";
 import { RobloxProvider, type RobloxProfile } from "@/lib/roblox-provider";
+import { demoAccessEnabled, demoRequestAllowed, secureApplicationCookies } from "@/lib/local-mode";
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
+import { authenticatePreview } from "@/lib/preview-auth";
 
-const providers: NextAuthConfig["providers"] = [
+const providers: NextAuthConfig["providers"] = hostedPreviewEnabled() ? [] : [
   Discord({
     clientId: process.env.AUTH_DISCORD_ID || "not-configured",
     clientSecret: process.env.AUTH_DISCORD_SECRET || "not-configured",
@@ -21,13 +24,21 @@ const providers: NextAuthConfig["providers"] = [
   }),
 ];
 
-if (process.env.NODE_ENV !== "production" && process.env.AUTH_DEMO_MODE !== "false") {
+if (hostedPreviewEnabled()) providers.push(Credentials({
+  id: "preview",
+  name: "Entscheidungsvorschau",
+  credentials: { role: {}, password: {} },
+  authorize: credentials => authenticatePreview(credentials.role, credentials.password),
+}));
+
+if (demoAccessEnabled()) {
   providers.push(
     Credentials({
       id: "demo",
       name: "Demo-Zugang",
       credentials: {},
-      authorize() {
+      authorize(_credentials, request) {
+        if (!demoRequestAllowed(request)) return null;
         return { id: "demo-owner", name: "DRP Demo-Owner", registrationCompleted: true };
       },
     }),
@@ -48,7 +59,7 @@ function resultCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureApplicationCookies(),
     path: "/",
     maxAge: 2 * 60,
   };
@@ -253,5 +264,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-export const discordConfigured = Boolean(process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET);
-export const robloxConfigured = Boolean(process.env.AUTH_ROBLOX_ID && process.env.AUTH_ROBLOX_SECRET);
+export const discordConfigured = !hostedPreviewEnabled() && Boolean(process.env.AUTH_DISCORD_ID && process.env.AUTH_DISCORD_SECRET);
+export const robloxConfigured = !hostedPreviewEnabled() && Boolean(process.env.AUTH_ROBLOX_ID && process.env.AUTH_ROBLOX_SECRET);

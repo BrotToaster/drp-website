@@ -1,4 +1,6 @@
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
 import { Prisma } from "@prisma/client";
+import { demoAccessEnabled } from "@/lib/local-mode";
 import { demoServerDetails, type ErLcServerResponse } from "@/lib/erlc";
 import { prisma } from "@/lib/prisma";
 
@@ -12,7 +14,7 @@ const STATE_ID = "primary";
 const LEASE_MS = 30_000;
 
 function demoAllowed() {
-  return process.env.NODE_ENV !== "production" && process.env.AUTH_DEMO_MODE !== "false";
+  return hostedPreviewEnabled() || demoAccessEnabled();
 }
 
 function countStaff(staff: DetailedResponse["Staff"]) {
@@ -40,7 +42,7 @@ function cleanDetails(details: DetailedResponse): Prisma.InputJsonValue {
 }
 
 async function fetchServer(detailed: boolean): Promise<DetailedResponse> {
-  if (!process.env.ERLC_SERVER_KEY) {
+  if (!process.env.ERLC_SERVER_KEY || hostedPreviewEnabled()) {
     if (demoAllowed()) return demoServerDetails;
     throw new Error("ERLC_SERVER_KEY fehlt.");
   }

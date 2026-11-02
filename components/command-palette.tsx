@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { NavigationItem } from "@/lib/navigation";
+import { useDocumentScrollLock } from "@/lib/use-scroll-lock";
 
 type SearchResult = { id: string; kind: string; title: string; subtitle?: string; href: string; status?: string };
 
 export function CommandPalette({ items, open, onClose }: { items: NavigationItem[]; open: boolean; onClose: () => void }) {
+  useDocumentScrollLock(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [remote, setRemote] = useState<SearchResult[]>([]);

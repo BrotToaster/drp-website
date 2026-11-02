@@ -32,13 +32,13 @@ export default async function StaffHandbookPage({ searchParams }: { searchParams
       <div className="grid gap-7">
         {visible.map((category) => (
           <section key={category.id}>
-            <div className="mb-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[#efc76e]">{category.title}</p>{category.description && <p className="mt-1 text-sm text-[#777d81]">{category.description}</p>}</div>
+            <div className="mb-3"><p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--accent-ink)]">{category.title}</p>{category.description && <p className="mt-1 text-sm text-[var(--muted)]">{category.description}</p>}</div>
             <div className="grid gap-3">
-              {category.items.map((item) => <details key={item.id} className="surface group p-5"><summary className="cursor-pointer list-none pr-6 font-semibold">{item.question}</summary><p className="mt-4 whitespace-pre-wrap border-t border-white/[0.07] pt-4 text-sm leading-7 text-[#a8adb0]">{item.answer}</p></details>)}
+              {category.items.map((item) => <details key={item.id} className="surface group p-5"><summary className="cursor-pointer list-none pr-6 font-semibold">{item.question}</summary><p className="mt-4 whitespace-pre-wrap border-t border-[var(--line)] pt-4 text-sm leading-7 text-[var(--muted)]">{item.answer}</p></details>)}
             </div>
           </section>
         ))}
-        {!visible.length && <div className="surface p-8 text-center text-sm text-[#8d9397]">Keine passende interne Antwort gefunden.</div>}
+        {!visible.length && <div className="surface p-8 text-center text-sm text-[var(--muted)]">Keine passende interne Antwort gefunden.</div>}
       </div>
     </PortalShell>
   );

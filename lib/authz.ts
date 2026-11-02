@@ -5,10 +5,14 @@ import type { AuthorizationContext, CalendarAccess, DocumentAccess, TicketAccess
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { ensureBaseRoleAssignments } from "@/lib/role-assignments";
+import { demoAccessEnabled } from "./local-mode";
+import { hostedPreviewEnabled } from "./preview-mode";
 
 export async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  if (session.user.id === "demo-owner" && !demoAccessEnabled()) redirect("/login");
+  if (session.user.id.startsWith("preview-") && !hostedPreviewEnabled()) redirect("/login");
   if (!session.user.registrationCompleted && session.user.id !== "demo-owner") {
     redirect("/registrieren");
   }
@@ -38,6 +42,9 @@ export async function ensureDbUser() {
 }
 
 export async function getAuthorizationContext(userId: string): Promise<AuthorizationContext> {
+  if ((userId === "demo-owner" && !demoAccessEnabled()) || (userId.startsWith("preview-") && !hostedPreviewEnabled())) {
+    return { userId, roleIds: [], roleNames: [], primaryRole: "Mitglied", permissions: [], ticketAccess: [], documentAccess: [], calendarAccess: [], isOwner: false };
+  }
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
@@ -66,12 +73,13 @@ export async function getAuthorizationContext(userId: string): Promise<Authoriza
       ticketAccess: [],
       documentAccess: [],
       calendarAccess: [],
-      isOwner: userId === "demo-owner",
+      isOwner: false,
     };
   }
 
   const isOwner =
-    user.id === "demo-owner" ||
+    (user.id === "demo-owner" && demoAccessEnabled()) ||
+    (user.id === "preview-admin" && hostedPreviewEnabled()) ||
     Boolean(user.discordId && user.discordId === process.env.OWNER_DISCORD_ID);
   const permissionSet = new Set<PermissionKey>();
   const categoryAccess = new Map<string, TicketAccess>();

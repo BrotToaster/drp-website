@@ -72,11 +72,11 @@ export default async function StaffDashboardPage() {
   return (
     <PortalShell authorization={authorization} title="Einsatzübersicht" description="Tickets, Serverauslastung und aktuelle ER:LC-Lage in einem Arbeitsbereich." section="staff">
       <section className="surface mb-5 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] p-5 md:p-6">
-          <div><div className="flex items-center gap-3"><span className={"status-dot " + (!state?.online ? "offline" : "")} /><h2 className="text-xl font-semibold">{state?.name || "DRP Private Server"}</h2><span className={"badge " + (!stale && state?.online ? "badge-gold" : "")}>{stale ? "Veraltet" : state?.online ? "Online" : "Nicht verfügbar"}</span></div><p className="mt-2 text-xs text-[#777d81]"><RelativeTime value={state?.lastSuccessfulAt?.toISOString() || null} />{state?.errorMessage && <><span> · </span><RelativeTime value={state.checkedAt?.toISOString() || null} prefix="Letzter Versuch" /><span> · {state.errorMessage}</span></>}</p></div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] p-5 md:p-6">
+          <div><div className="flex items-center gap-3"><span className={"status-dot " + (!state?.online ? "offline" : "")} /><h2 className="text-xl font-semibold">{state?.name || "DRP Private Server"}</h2><span className={"badge " + (!stale && state?.online ? "badge-gold" : "")}>{stale ? "Veraltet" : state?.online ? "Online" : "Nicht verfügbar"}</span></div><p className="mt-2 text-xs text-[var(--muted)]"><RelativeTime value={state?.lastSuccessfulAt?.toISOString() || null} />{state?.errorMessage && <><span> · </span><RelativeTime value={state.checkedAt?.toISOString() || null} prefix="Letzter Versuch" /><span> · {state.errorMessage}</span></>}</p></div>
           {hasPermission(authorization, "erlc.check") && <ReliableActionForm action={checkErlcAction}><SubmitButton variant="secondary" pendingText="ER:LC wird geprüft …">ER:LC jetzt prüfen</SubmitButton></ReliableActionForm>}
         </div>
-        <div className="grid grid-cols-2 gap-px bg-white/[0.07] sm:grid-cols-4 lg:grid-cols-7">
+        <div className="grid grid-cols-2 gap-px bg-[var(--surface-soft)] sm:grid-cols-4 lg:grid-cols-7">
           {[
             ["Spieler", `${state?.currentPlayers ?? "–"} / ${state?.maxPlayers ?? "–"}`],
             ["Queue", state?.queueCount ?? "–"],
@@ -85,16 +85,16 @@ export default async function StaffDashboardPage() {
             ["Notrufe", state?.emergencyCount ?? "–"],
             ["Mod-Calls", state?.modCallCount ?? "–"],
             ["24h Peak", peak || "–"],
-          ].map(([label, result]) => <div key={label} className="bg-[#111519] p-4"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#6f7579]">{label}</p><p className="mt-2 text-2xl font-semibold">{result}</p></div>)}
+          ].map(([label, result]) => <div key={label} className="bg-[var(--surface-soft)] p-4"><p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">{label}</p><p className="mt-2 text-2xl font-semibold">{result}</p></div>)}
         </div>
       </section>
 
       <div className="mb-5 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <section className="surface p-5 md:p-6"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.13em] text-[#efc76e]">Aktivität · 24 Stunden</p><p className="mt-1 text-sm text-[#777d81]">Durchschnitt {average} Spieler</p></div></div><div className="mt-6 flex h-28 items-end gap-1" aria-label="Spieleraktivität">{chart.length ? chart.map((item) => <div key={item.id} className="min-w-1 flex-1 rounded-t bg-[#d6aa4c]/70" style={{ height: `${Math.max(5, (item.players / Math.max(1, peak)) * 100)}%` }} title={`${item.players} Spieler · ${formatDateTime(item.capturedAt)}`} />) : <p className="self-center text-sm text-[#777d81]">Nach dem ersten automatischen Abruf erscheint hier der Verlauf.</p>}</div></section>
+        <section className="surface p-5 md:p-6"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.13em] text-[var(--accent-ink)]">Aktivität · 24 Stunden</p><p className="mt-1 text-sm text-[var(--muted)]">Durchschnitt {average} Spieler</p></div></div><div className="mt-6 flex h-28 items-end gap-1" aria-label="Spieleraktivität">{chart.length ? chart.map((item) => <div key={item.id} className="min-w-1 flex-1 rounded-t bg-[var(--accent-soft)]" style={{ height: `${Math.max(5, (item.players / Math.max(1, peak)) * 100)}%` }} title={`${item.players} Spieler · ${formatDateTime(item.capturedAt)}`} />) : <p className="self-center text-sm text-[var(--muted)]">Nach dem ersten automatischen Abruf erscheint hier der Verlauf.</p>}</div></section>
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">{[
           ["Für dich sichtbare offene Tickets", ticketCount, "/staff/tickets"],
           ["Registrierte Nutzer", userCount, "/staff/nutzer"],
-        ].map(([label, result, href]) => <Link key={href} href={String(href)} className="surface surface-interactive p-5"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">{label}</p><p className="mt-3 text-3xl font-semibold">{result}</p><span className="mt-3 inline-block text-xs font-bold text-[#efc76e]">Öffnen →</span></Link>)}</section>
+        ].map(([label, result, href]) => <Link key={href} href={String(href)} className="surface surface-interactive p-5"><p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--muted)]">{label}</p><p className="mt-3 text-3xl font-semibold">{result}</p><span className="mt-3 inline-block text-xs font-bold text-[var(--accent-ink)]">Öffnen →</span></Link>)}</section>
       </div>
 
       {canSeeDetails && <OperationsLivePanel players={players} events={events} />}

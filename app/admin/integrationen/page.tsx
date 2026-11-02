@@ -37,7 +37,7 @@ export default async function IntegrationsPage() {
     { name: "ER:LC v2", configured: Boolean(process.env.ERLC_SERVER_KEY), date: erlcState?.lastSuccessfulAt, staleAfterMs: 10 * 60 * 1000, failed: Boolean(erlcState?.errorMessage) },
     { name: "Cloudinary", configured: cloudinaryConfigured },
     { name: "Melonly", configured: Boolean(process.env.MELONLY_API_TOKEN), date: lastMelonlySync?.lastSyncedAt, staleAfterMs: 2 * 60 * 60 * 1000 },
-    { name: "Railway-Cronjob", configured: Boolean(lastJobRun), date: lastJobRun?.finishedAt || lastJobRun?.startedAt, staleAfterMs: 2 * 60 * 60 * 1000, failed: lastJobRun?.status === "FAILED" || (lastJobRun?.status === "RUNNING" && now - lastJobRun.startedAt.getTime() > 15 * 60 * 1000) },
+    { name: "Hintergrundjobs", configured: Boolean(lastJobRun), date: lastJobRun?.finishedAt || lastJobRun?.startedAt, staleAfterMs: 2 * 60 * 60 * 1000, failed: lastJobRun?.status === "FAILED" || (lastJobRun?.status === "RUNNING" && now - lastJobRun.startedAt.getTime() > 15 * 60 * 1000) },
   ];
   return (
     <PortalShell authorization={authorization} title="Integrationsstatus" description="Nur Statusinformationen – Geheimnisse werden weder angezeigt noch in der Datenbank gespeichert." section="admin">
@@ -49,8 +49,8 @@ export default async function IntegrationsPage() {
               <h2 className="font-semibold">{integration.name}</h2>
               <span className={"status-dot" + (status.tone === "ready" ? "" : " offline")} />
             </div>
-            <p className="mt-4 text-sm text-[#777d81]"><strong className="text-current">{status.label}</strong>{integration.date ? " · letzter Abgleich " + formatDateTime(integration.date) : ""}</p>
-            {integration.name === "Railway-Cronjob" && lastJobRun?.error && <p className="mt-2 line-clamp-2 text-xs text-[#f28d8a]">{lastJobRun.error}</p>}
+            <p className="mt-4 text-sm text-[var(--muted)]"><strong className="text-current">{status.label}</strong>{integration.date ? " · letzter Abgleich " + formatDateTime(integration.date) : ""}</p>
+            {integration.name === "Hintergrundjobs" && lastJobRun?.error && <p className="mt-2 line-clamp-2 text-xs text-[var(--danger-ink)]">{lastJobRun.error}</p>}
           </div>
         })}
       </div>

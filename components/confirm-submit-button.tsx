@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { useFormRuntime } from "@/components/form-runtime-context";
 
 export function ConfirmSubmitButton({
   children,
@@ -17,7 +18,9 @@ export function ConfirmSubmitButton({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const submitted = useRef(false);
   const [refreshing, startRefresh] = useTransition();
-  const { pending } = useFormStatus();
+  const { pending: nativePending } = useFormStatus();
+  const { submitting } = useFormRuntime();
+  const pending = submitting ?? nativePending;
   useEffect(() => {
     if (pending) { submitted.current = true; return; }
     if (!submitted.current) return;

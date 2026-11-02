@@ -45,14 +45,14 @@ export default async function StaffRulesPage({
       section="staff"
     >
       {(query.error || query.saved) && (
-        <p role={query.error ? "alert" : "status"} className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>
+        <p role={query.error ? "alert" : "status"} className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[var(--danger-ink)]" : "bg-[#57c98c]/10 text-[var(--success-ink)]")}>
           {query.error ? "Die Regel konnte nicht gespeichert werden." : "Die Regel wurde gespeichert."}
         </p>
       )}
 
       {canCreate && (
         <details className="surface mb-5 p-6">
-          <summary className="cursor-pointer font-semibold text-[#efc76e]">Neue Regel erstellen</summary>
+          <summary className="cursor-pointer font-semibold text-[var(--accent-ink)]">Neue Regel erstellen</summary>
           <form action={saveRuleAction} className="mt-6 grid gap-4">
             <div className="grid gap-4 md:grid-cols-[1fr_240px_120px]">
               <label className="field-label">Titel<input className="field" name="title" required /></label>
@@ -86,9 +86,9 @@ export default async function StaffRulesPage({
               <summary className="cursor-pointer list-none">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">{rule.category} · Position {rule.order}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--muted)]">{rule.category} · Position {rule.order}</p>
                     <h2 className="mt-2 text-lg font-semibold">{rule.title}</h2>
-                    <p className="mt-2 text-xs text-[#777d81]">
+                    <p className="mt-2 text-xs text-[var(--muted)]">
                       Zuletzt bearbeitet {formatDateTime(revision?.updatedAt || rule.updatedAt)}
                       {revision?.editor ? " von " + revision.editor.name : ""} · {revision?.status || "Ohne Revision"}
                     </p>
@@ -97,7 +97,7 @@ export default async function StaffRulesPage({
                 </div>
               </summary>
               {canEdit && (
-                <form action={saveRuleAction} className="mt-6 grid gap-4 border-t border-white/[0.07] pt-6">
+                <form action={saveRuleAction} className="mt-6 grid gap-4 border-t border-[var(--line)] pt-6">
                   <input type="hidden" name="ruleId" value={rule.id} />
                   <div className="grid gap-4 md:grid-cols-[1fr_240px_120px]">
                     <label className="field-label">Titel<input className="field" name="title" defaultValue={rule.title} required /></label>

@@ -87,7 +87,7 @@ export const adminNavigation: NavigationGroup[] = [
     { href: "/admin/kalender", label: "Kalenderzugriffe", code: "KZ", keywords: ["kategorien", "rollen"], permission: "calendar.manage_categories" },
     { href: "/admin/melonly", label: "Melonly & Team", code: "ME", keywords: ["zeiten", "ranks", "weekly"], permission: "melonly.manage" },
     { href: "/admin/integrationen", label: "Integrationen", code: "IN", keywords: ["status", "api", "sync"], permission: "integrations.view" },
-    { href: "/admin/rechtliches", label: "Rechtliches", code: "RE", keywords: ["datenschutz", "impressum"], permission: "legal.manage" },
+    { href: "/admin/rechtliches", label: "Datenschutz", code: "RE", keywords: ["datenschutz", "betreiber"], permission: "legal.manage" },
   ] },
 ];
 

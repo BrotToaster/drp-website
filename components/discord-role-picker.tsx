@@ -28,7 +28,7 @@ export function DiscordRolePicker({
     <fieldset className="discord-role-picker md:col-span-2">
       <input type="hidden" name="manageDiscordMappings" value="1" />
       <legend className="field-label">Discord-Rollen</legend>
-      <p className="mb-3 text-xs font-normal leading-5 text-[#777d81]">
+      <p className="mb-3 text-xs font-normal leading-5 text-[var(--muted)]">
         Ausgewählte Discord-Rollen vergeben diese Website-Rolle automatisch. Mehrfachauswahl ist möglich.
       </p>
       <label className="discord-role-search">
@@ -62,7 +62,7 @@ export function DiscordRolePicker({
           </label>
         ))}
         {!visibleCount && (
-          <p className="p-4 text-center text-xs text-[#777d81]">
+          <p className="p-4 text-center text-xs text-[var(--muted)]">
             {roles.length ? "Keine passende Discord-Rolle gefunden." : "Noch keine Discord-Rollen synchronisiert."}
           </p>
         )}

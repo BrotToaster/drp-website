@@ -25,13 +25,13 @@ export default async function AdminStaffFaqPage() {
 
   return (
     <PortalShell authorization={authorization} title="Staff-FAQ verwalten" description="Interne Arbeitsgrundsätze pflegen, sortieren und gezielt ausblenden." section="admin">
-      <details className="surface mb-6 p-6"><summary className="cursor-pointer font-semibold text-[#efc76e]">Neue interne Frage</summary><ReliableActionForm action={saveStaffFaqAction} resetOnSuccess className="mt-6 grid gap-4">{fields(undefined, categories[0]?.id)}</ReliableActionForm></details>
+      <details className="surface mb-6 p-6"><summary className="cursor-pointer font-semibold text-[var(--accent-ink)]">Neue interne Frage</summary><ReliableActionForm action={saveStaffFaqAction} resetOnSuccess className="mt-6 grid gap-4">{fields(undefined, categories[0]?.id)}</ReliableActionForm></details>
       <div className="grid gap-7">
         {categories.map((category) => <section key={category.id}>
-          <div className="mb-3"><h2 className="text-lg font-semibold">{category.title}</h2><p className="text-xs text-[#777d81]">{category.items.length} Einträge</p></div>
+          <div className="mb-3"><h2 className="text-lg font-semibold">{category.title}</h2><p className="text-xs text-[var(--muted)]">{category.items.length} Einträge</p></div>
           <div className="grid gap-3">{category.items.map((item) => <details key={item.id} className="surface p-5">
-            <summary className="cursor-pointer list-none"><div className="flex justify-between gap-3"><div><p className="font-semibold">{item.question}</p><p className="mt-1 text-xs text-[#777d81]">Aktualisiert {formatDateTime(item.updatedAt)}</p></div><span className={"badge " + (item.visible ? "badge-gold" : "")}>{item.visible ? "Sichtbar" : "Versteckt"}</span></div></summary>
-            <ReliableActionForm action={saveStaffFaqAction} className="mt-5 grid gap-4 border-t border-white/[0.07] pt-5">{fields(item)}</ReliableActionForm>
+            <summary className="cursor-pointer list-none"><div className="flex justify-between gap-3"><div><p className="font-semibold">{item.question}</p><p className="mt-1 text-xs text-[var(--muted)]">Aktualisiert {formatDateTime(item.updatedAt)}</p></div><span className={"badge " + (item.visible ? "badge-gold" : "")}>{item.visible ? "Sichtbar" : "Versteckt"}</span></div></summary>
+            <ReliableActionForm action={saveStaffFaqAction} className="mt-5 grid gap-4 border-t border-[var(--line)] pt-5">{fields(item)}</ReliableActionForm>
             <ReliableActionForm action={deleteStaffFaqAction} className="mt-3"><input type="hidden" name="id" value={item.id} /><SubmitButton variant="danger" pendingText="Wird gelöscht …">Löschen</SubmitButton></ReliableActionForm>
           </details>)}</div>
         </section>)}

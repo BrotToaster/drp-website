@@ -1,3 +1,4 @@
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
 import { cookies } from "next/headers";
 import {
   linkDiscordAction,
@@ -12,6 +13,8 @@ import { PortalShell } from "@/components/portal-shell";
 import { SubmitButton } from "@/components/submit-button";
 import { ensureDbUser, getAuthorizationContext } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { getProfileRoleData } from "@/lib/profile-role-data";
+import type { ProfileRoleGroup } from "@/lib/profile-roles";
 import { formatDateTime } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +36,26 @@ function resultMessage(value?: string) {
   return { ok: false, text: "Die Kontoverknüpfung konnte nicht geändert werden." };
 }
 
+function RoleDetails({ group }: { group: ProfileRoleGroup }) {
+  return (
+    <>
+      {group.roles.length > 0 && (
+        <ul className="flex flex-wrap gap-2" aria-label="Zugewiesene Rollen">
+          {group.roles.map((role) => (
+            <li key={role.id} className="badge max-w-full !normal-case !tracking-normal [overflow-wrap:anywhere]">{role.name}</li>
+          ))}
+        </ul>
+      )}
+      {group.message && <p className="text-sm leading-6 text-[var(--muted)]">{group.message}</p>}
+      {group.syncedAt && (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          Letzter Rollenabgleich: <time dateTime={group.syncedAt.toISOString()}>{formatDateTime(group.syncedAt)}</time>
+        </p>
+      )}
+    </>
+  );
+}
+
 export default async function ProfilePage() {
   const user = await ensureDbUser();
   const authorization = await getAuthorizationContext(user.id);
@@ -40,33 +63,58 @@ export default async function ProfilePage() {
     where: { id: user.id },
     include: { accounts: { select: { provider: true } } },
   });
+  const roles = await getProfileRoleData(profile || user);
   const result = resultMessage((await cookies()).get("drp-account-result")?.value);
+  const preview = hostedPreviewEnabled();
   const demo = user.id === "demo-owner";
-  const discordLinked = demo || Boolean(profile?.accounts.some((account) => account.provider === "discord"));
-  const robloxLinked = demo || Boolean(profile?.accounts.some((account) => account.provider === "roblox"));
+  const discordLinked = Boolean(profile?.accounts.some((account) => account.provider === "discord"));
+  const robloxLinked = Boolean(profile?.accounts.some((account) => account.provider === "roblox"));
   const protectedOwner = Boolean(profile?.discordId && profile.discordId === process.env.OWNER_DISCORD_ID);
 
   return (
-    <PortalShell authorization={authorization} title="Dein Profil" description="Authentifizierte Konten sicher aktualisieren oder bewusst wechseln.">
+    <PortalShell authorization={authorization} title="Dein Profil" description="Deine Rollen und verknüpften Konten im Überblick.">
       {result && (
-        <p role={result.ok ? "status" : "alert"} className={"mb-5 rounded-xl p-4 text-sm " + (result.ok ? "bg-[#57c98c]/10 text-[#75d7a3]" : "bg-[#ef6f6c]/10 text-[#f28d8a]")}>
+        <p role={result.ok ? "status" : "alert"} className={"mb-5 rounded-xl p-4 text-sm " + (result.ok ? "bg-[#57c98c]/10 text-[var(--success-ink)]" : "bg-[#ef6f6c]/10 text-[var(--danger-ink)]")}>
           {result.text}
         </p>
       )}
-      <div className="grid gap-5 xl:grid-cols-[1fr_.7fr]">
+      <div className="grid items-start gap-5 xl:grid-cols-[1fr_.7fr]">
+        <div className="grid min-w-0 gap-5">
+        <section className="surface p-6 md:p-8" aria-labelledby="profile-roles-heading">
+          <h2 id="profile-roles-heading" className="text-xl font-semibold">Deine Rollen</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Deine Website-Rechte und die zuletzt abgeglichenen Rollen deiner verbundenen Konten.</p>
+          <dl className="mt-7">
+            <div className="grid gap-2 border-b border-[var(--line)] pb-5 sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-5">
+              <dt className="font-semibold">Discord</dt>
+              <dd className="grid min-w-0 gap-2"><RoleDetails group={roles.discord} /></dd>
+            </div>
+            <div className="grid gap-2 border-b border-[var(--line)] py-5 sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-5">
+              <dt className="font-semibold">Website</dt>
+              <dd className="grid min-w-0 gap-2">
+                <RoleDetails group={{ roles: authorization.roleNames.map((name) => ({ id: name, name })), message: authorization.roleNames.length ? null : "Dir ist noch keine Website-Rolle zugewiesen.", syncedAt: null }} />
+                <p className="text-xs leading-5 text-[var(--muted)]">Aktuell in deinem DRP-Konto zugewiesen.</p>
+              </dd>
+            </div>
+            <div className="grid gap-2 pt-5 sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-5">
+              <dt className="font-semibold">Melonly</dt>
+              <dd className="grid min-w-0 gap-2"><RoleDetails group={roles.melonly} /></dd>
+            </div>
+          </dl>
+        </section>
         <section className="surface p-6 md:p-8">
           <h2 className="text-xl font-semibold">Kontoverknüpfungen</h2>
-          <p className="mt-2 text-sm leading-6 text-[#858b90]">
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
             „Daten aktualisieren“ akzeptiert nur dasselbe Konto. „Konto wechseln“ ersetzt die Zuordnung erst nach einer neuen OAuth-Bestätigung.
           </p>
-          <div className="mt-7 grid gap-3">
-            <div className="rounded-xl border border-white/[0.07] p-5">
+          {preview && <p className="mt-3 text-sm text-[var(--muted)]">In der Entscheidungsvorschau bleiben echte Kontoverknüpfungen ausgeschaltet. Die Website-Rollen und internen Abläufe kannst du mit deinem Testkonto ausprobieren.</p>}
+          <fieldset disabled={preview} className="mt-7 grid gap-3" aria-label="Externe Kontoverknüpfungen">
+            <div className="rounded-xl border border-[var(--line)] p-5">
               <div className="flex flex-wrap items-center gap-4">
                 <span className={"status-dot" + (robloxLinked ? "" : " offline")} />
                 <div className="min-w-[160px] flex-1">
                   <p className="font-semibold">Roblox</p>
-                  <p className="mt-1 text-xs text-[#777d81]">{robloxLinked ? (demo ? "DRP Demo (@DRP_Demo)" : accountLabel(profile?.robloxDisplayName, profile?.robloxName)) : "Nicht verbunden"}</p>
-                  {profile?.robloxSyncedAt && <p className="mt-1 text-[11px] text-[#60666a]">Aktualisiert: {formatDateTime(profile.robloxSyncedAt)}</p>}
+                  <p className="mt-1 text-xs text-[var(--muted)]">{robloxLinked ? accountLabel(profile?.robloxDisplayName, profile?.robloxName) : "Nicht verbunden"}</p>
+                  {profile?.robloxSyncedAt && <p className="mt-1 text-[11px] text-[var(--muted)]">Aktualisiert: {formatDateTime(profile.robloxSyncedAt)}</p>}
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -83,13 +131,13 @@ export default async function ProfilePage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/[0.07] p-5">
+            <div className="rounded-xl border border-[var(--line)] p-5">
               <div className="flex flex-wrap items-center gap-4">
                 <span className={"status-dot" + (discordLinked ? "" : " offline")} />
                 <div className="min-w-[160px] flex-1">
                   <p className="font-semibold">Discord</p>
-                  <p className="mt-1 text-xs text-[#777d81]">{discordLinked ? (demo ? "DRP Demo-Owner (@demo-owner)" : accountLabel(profile?.discordDisplayName, profile?.discordUsername)) : "Nicht verbunden"}</p>
-                  {profile?.discordSyncedAt && <p className="mt-1 text-[11px] text-[#60666a]">Aktualisiert: {formatDateTime(profile.discordSyncedAt)}</p>}
+                  <p className="mt-1 text-xs text-[var(--muted)]">{discordLinked ? accountLabel(profile?.discordDisplayName, profile?.discordUsername) : "Nicht verbunden"}</p>
+                  {profile?.discordSyncedAt && <p className="mt-1 text-[11px] text-[var(--muted)]">Aktualisiert: {formatDateTime(profile.discordSyncedAt)}</p>}
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -107,22 +155,23 @@ export default async function ProfilePage() {
                 )}
               </div>
             </div>
-          </div>
+          </fieldset>
         </section>
+        </div>
 
         <aside className="surface h-fit p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">DRP-Konto</p>
+          <h2 className="text-xl font-semibold">Dein DRP-Konto</h2>
           <div className="mt-5 flex items-center gap-4">
-            <div className="grid h-12 w-12 place-items-center rounded-full bg-[#d6aa4c]/10 font-bold text-[#efc76e]">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--accent-soft)] font-bold text-[var(--accent-ink)]">
               {(profile?.name || user.name || "DR").slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="truncate font-semibold">{profile?.name || user.name}</p>
-              <p className="mt-1 truncate text-xs text-[#777d81]">{authorization.roleNames.join(", ") || "Mitglied"}</p>
+              {demo && <p className="mt-1 text-xs text-[var(--muted)]">Lokales Demokonto</p>}
             </div>
           </div>
           <div className="divider my-6" />
-          <p className="text-xs leading-6 text-[#777d81]">
+          <p className="text-xs leading-6 text-[var(--muted)]">
             DRP erhält niemals deine Passwörter. Discord wird nur mit „identify“ abgefragt; eine E-Mail-Adresse wird weder benötigt noch angezeigt.
           </p>
         </aside>

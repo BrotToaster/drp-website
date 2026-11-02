@@ -1,3 +1,6 @@
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
+import { demoAccessEnabled } from "@/lib/local-mode";
+
 export type ErLcPlayer = {
   Team?: string;
   Player?: string;
@@ -94,7 +97,7 @@ export const demoServerDetails: ErLcServerResponse = {
 };
 
 function canUseDemo() {
-  return process.env.NODE_ENV !== "production" && process.env.AUTH_DEMO_MODE !== "false";
+  return hostedPreviewEnabled() || demoAccessEnabled();
 }
 
 export function isErlcStateStale(lastSuccessfulAt: Date | string | null, now = Date.now()) {
@@ -109,7 +112,7 @@ export async function getServerDetails(sensitive = false): Promise<{
 }> {
   const serverKey = process.env.ERLC_SERVER_KEY;
 
-  if (!serverKey) {
+  if (!serverKey || hostedPreviewEnabled()) {
     if (canUseDemo()) {
       return { status: transformPublicStatus(demoServerDetails, "demo"), details: demoServerDetails };
     }

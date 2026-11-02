@@ -1,9 +1,11 @@
 import type { JSONContent } from "@tiptap/react";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
+import { ContentImage } from "@/components/content-image";
+import { HighlightedText } from "@/components/highlighted-text";
+import { safeContentHref } from "@/lib/content-links";
 
 function safeHref(value: unknown) {
-  if (typeof value !== "string") return undefined;
-  return /^(https?:|mailto:)/i.test(value) ? value : undefined;
+  return safeContentHref(value);
 }
 
 function withMarks(node: JSONContent, child: ReactNode) {
@@ -15,7 +17,7 @@ function withMarks(node: JSONContent, child: ReactNode) {
     if (mark.type === "link") {
       const href = safeHref(mark.attrs?.href);
       return href ? (
-        <a key={index} href={href} target="_blank" rel="noreferrer noopener">
+        <a key={index} href={href} target={href.startsWith("/") || href.startsWith("#") ? undefined : "_blank"} rel={href.startsWith("/") || href.startsWith("#") ? undefined : "noreferrer noopener"}>
           {value}
         </a>
       ) : value;
@@ -24,17 +26,17 @@ function withMarks(node: JSONContent, child: ReactNode) {
   }, child);
 }
 
-function renderNode(node: JSONContent, key: number | string): ReactNode {
-  if (node.type === "text") return <span key={key}>{withMarks(node, node.text || "")}</span>;
-  const children = node.content?.map((child, index) => renderNode(child, index));
+function renderNode(node: JSONContent, key: number | string, headingOffset: number, highlightQuery: string): ReactNode {
+  if (node.type === "text") return <span key={key}>{withMarks(node, highlightQuery ? <HighlightedText text={node.text || ""} query={highlightQuery} /> : node.text || "")}</span>;
+  const children = node.content?.map((child, index) => renderNode(child, index, headingOffset, highlightQuery));
   switch (node.type) {
     case "doc":
       return <>{children}</>;
     case "paragraph":
       return <p key={key}>{children || <br />}</p>;
     case "heading": {
-      const level = Math.min(3, Math.max(2, Number(node.attrs?.level) || 2));
-      return level === 3 ? <h3 key={key}>{children}</h3> : <h2 key={key}>{children}</h2>;
+      const level = Math.min(6, Math.min(3, Math.max(2, Number(node.attrs?.level) || 2)) + headingOffset);
+      return createElement(`h${level}`, { key }, children);
     }
     case "bulletList":
       return <ul key={key}>{children}</ul>;
@@ -71,8 +73,7 @@ function renderNode(node: JSONContent, key: number | string): ReactNode {
     case "image": {
       const src = safeHref(node.attrs?.src);
       return src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={key} src={src} alt={String(node.attrs?.alt || "")} loading="lazy" />
+        <ContentImage key={key} src={src} alt={String(node.attrs?.alt || node.attrs?.title || "Bild zum Beitrag")} className="h-auto max-w-full" />
       ) : null;
     }
     default:
@@ -80,6 +81,6 @@ function renderNode(node: JSONContent, key: number | string): ReactNode {
   }
 }
 
-export function RichContent({ content }: { content: JSONContent }) {
-  return <div className="rich-content text-safe">{renderNode(content, "root")}</div>;
+export function RichContent({ content, headingOffset = 0, highlightQuery = "" }: { content: JSONContent; headingOffset?: number; highlightQuery?: string }) {
+  return <div className="rich-content text-safe">{renderNode(content, "root", headingOffset, highlightQuery)}</div>;
 }

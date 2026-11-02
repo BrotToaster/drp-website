@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/metadata";
 import { PageIntro } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 
-export const metadata: Metadata = { title: "FAQ" };
+export const metadata = publicMetadata("Häufige Fragen", "Antworten zu Servereinstieg, Konten, Regelwerk und Kontaktmöglichkeiten bei DRP.", "/faq");
 export const dynamic = "force-dynamic";
 
 const fallbackItems = [
@@ -36,7 +36,7 @@ export default async function FaqPage({ searchParams }: { searchParams: Promise<
             <label className="field-label">Kategorie<select className="field" name="category" defaultValue={query.category || ""}><option value="">Alle Kategorien</option>{allCategories.map((item) => <option key={item.category} value={item.category}>{item.category}</option>)}</select></label>
             <button className="button button-primary self-end" type="submit">Suchen</button>
           </form>
-          <div className="grid gap-8">{groups.map((group) => <section key={group.category}><p className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-[#efc76e]">{group.category}</p><div className="grid gap-3">{group.items.map((item) => <details key={item.id} className="surface group p-6"><summary className="cursor-pointer list-none font-semibold">{item.question}</summary><p className="mt-4 whitespace-pre-wrap border-t border-white/[0.07] pt-4 text-sm leading-7 text-[#9da3a8]">{item.answer}</p></details>)}</div></section>)}{!items.length && <div className="surface p-8 text-center text-sm text-[#8d9397]">Keine passende Antwort gefunden. Erstelle bei Bedarf ein Ticket.</div>}</div>
+          <div className="grid gap-8">{groups.map((group) => <section key={group.category}><p className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-[var(--accent-ink)]">{group.category}</p><div className="grid gap-3">{group.items.map((item) => <details key={item.id} className="surface group p-6"><summary className="cursor-pointer list-none font-semibold">{item.question}</summary><p className="mt-4 whitespace-pre-wrap border-t border-[var(--line)] pt-4 text-sm leading-7 text-[var(--muted)]">{item.answer}</p></details>)}</div></section>)}{!items.length && <div className="surface p-8 text-center text-sm text-[var(--muted)]">Keine passende Antwort gefunden. Erstelle bei Bedarf ein Ticket.</div>}</div>
         </div>
       </section>
     </>

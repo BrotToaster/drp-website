@@ -65,8 +65,8 @@ export default async function TicketsPage({
           Archiv
         </Link>
       </div>
-      {feedback && <p role="status" className="mb-5 rounded-xl bg-[#57c98c]/10 p-3 text-sm text-[#75d7a3]">{feedback}</p>}
-      {query.error && <p role="alert" className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-3 text-sm text-[#f28d8a]">Die Aktion konnte nicht ausgeführt werden.</p>}
+      {feedback && <p role="status" className="mb-5 rounded-xl bg-[#57c98c]/10 p-3 text-sm text-[var(--success-ink)]">{feedback}</p>}
+      {query.error && <p role="alert" className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-3 text-sm text-[var(--danger-ink)]">Die Aktion konnte nicht ausgeführt werden.</p>}
 
       <div className={"grid gap-5 " + (!archived ? "xl:grid-cols-[.9fr_1.1fr]" : "")}>
         {!archived && (
@@ -89,18 +89,18 @@ export default async function TicketsPage({
           </form>
         )}
         <section className="surface overflow-hidden">
-          <div className="border-b border-white/[0.07] p-6">
+          <div className="border-b border-[var(--line)] p-6">
             <h2 className="text-xl font-semibold">{archived ? "Archivierte Tickets" : "Deine aktiven Tickets"}</h2>
-            <p className="mt-1 text-sm text-[#777d81]">{archived ? "Diese Tickets bleiben für Staff sichtbar." : "Erledigte Tickets kannst du im Detail archivieren."}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{archived ? "Diese Tickets bleiben für Staff sichtbar." : "Erledigte Tickets kannst du im Detail archivieren."}</p>
           </div>
           {tickets.length ? (
             <div className="divide-y divide-white/[0.07]">
               {tickets.map((ticket) => (
                 <article key={ticket.id} className="flex flex-wrap items-center gap-4 p-5">
-                  <span className="text-xs font-bold text-[#efc76e]">#{ticket.number}</span>
-                  <Link href={"/dashboard/tickets/" + ticket.id} className="min-w-[180px] flex-1 hover:text-[#efc76e]">
+                  <span className="text-xs font-bold text-[var(--accent-ink)]">#{ticket.number}</span>
+                  <Link href={"/dashboard/tickets/" + ticket.id} className="min-w-[180px] flex-1 hover:text-[var(--accent-ink)]">
                     <p className="truncate text-sm font-semibold">{ticket.subject}</p>
-                    <p className="mt-1 text-xs text-[#70767a]">{ticket.category.label} · {formatDateTime(ticket.updatedAt)}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{ticket.category.label} · {formatDateTime(ticket.updatedAt)}</p>
                   </Link>
                   <StatusBadge status={ticket.status} />
                   {archived && (
@@ -127,7 +127,7 @@ export default async function TicketsPage({
               ))}
             </div>
           ) : (
-            <div className="p-10 text-center text-sm text-[#777d81]">
+            <div className="p-10 text-center text-sm text-[var(--muted)]">
               {archived ? "Dein Archiv ist leer." : "Du hast noch keine aktiven Tickets."}
             </div>
           )}

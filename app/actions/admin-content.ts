@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
 import { requirePermission } from "@/lib/authz";
-import { legalDetailsComplete, legalSettingsSchema, retentionSettingsSchema } from "@/lib/legal-settings";
+import { getLegalSettings, hasSampleLegalDetails, legalDetailsComplete, legalSettingsSchema, retentionSettingsSchema } from "@/lib/legal-settings";
 import { prisma } from "@/lib/prisma";
 
 const text = (formData: FormData, key: string) => String(formData.get(key) || "").trim();
@@ -13,17 +13,23 @@ const text = (formData: FormData, key: string) => String(formData.get(key) || ""
 export async function saveLegalSettingsAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
     const { user } = await requirePermission("legal.manage");
+    const currentLegal = await getLegalSettings();
   const legal = legalSettingsSchema.safeParse({
-    imprintEnabled: formData.get("imprintEnabled") === "on",
+    imprintEnabled: false,
     privacyPublished: formData.get("privacyPublished") === "on",
     operatorName: text(formData, "operatorName"),
     addressLine: text(formData, "addressLine"),
     postalCode: text(formData, "postalCode"),
     city: text(formData, "city"),
     country: text(formData, "country") || "Schweiz",
+      sampleDetails: formData.get("sampleDetails") === "on",
+      representative: text(formData, "representative"),
+      registerCourt: currentLegal.registerCourt,
+      registerNumber: currentLegal.registerNumber,
+      vatId: currentLegal.vatId,
     contactEmail: text(formData, "contactEmail"),
     donations: text(formData, "donations") || "NONE",
-    lastReviewedAt: new Date().toISOString(),
+    lastReviewedAt: formData.get("privacyPublished") === "on" ? new Date().toISOString() : null,
     noAgeVerificationAcknowledged: formData.get("noAgeVerificationAcknowledged") === "on",
   });
   const retention = retentionSettingsSchema.safeParse({
@@ -32,8 +38,8 @@ export async function saveLegalSettingsAction(_previous: ActionResult, formData:
     discordSnapshotDays: Number(text(formData, "discordSnapshotDays")),
   });
   if (!legal.success || !retention.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe die Betreiberangaben und Aufbewahrungsfristen." };
-  if (legal.data.privacyPublished && !legalDetailsComplete(legal.data)) {
-    return { ok: false, code: "VALIDATION", message: "Vor der Veröffentlichung müssen Name, Adresse und Kontakt-E-Mail vollständig sein." };
+  if (legal.data.privacyPublished && (!legalDetailsComplete(legal.data) || hasSampleLegalDetails(legal.data))) {
+    return { ok: false, code: "VALIDATION", message: "Für die Freigabe sind vollständige echte Betreiberangaben erforderlich; Musterangaben können nicht freigegeben werden." };
   }
 
   await prisma.$transaction([

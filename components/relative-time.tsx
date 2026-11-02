@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-function relative(iso: string) {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+function relative(iso: string, now: number) {
+  const seconds = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
   if (seconds < 10) return "gerade eben";
   if (seconds < 60) return `vor ${seconds} Sek.`;
   const minutes = Math.floor(seconds / 60);
@@ -14,11 +14,13 @@ function relative(iso: string) {
 }
 
 export function RelativeTime({ value, prefix = "Letzte Aktualisierung" }: { value: string | null; prefix?: string }) {
-  const [, tick] = useState(0);
+  const [now, tick] = useState<number | null>(null);
   useEffect(() => {
-    const interval = window.setInterval(() => tick((value) => value + 1), 30_000);
+    tick(Date.now());
+    const interval = window.setInterval(() => tick(Date.now()), 30_000);
     return () => window.clearInterval(interval);
   }, []);
   if (!value) return <span>{prefix}: noch nie</span>;
-  return <time dateTime={value} title={new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "medium" }).format(new Date(value))}>{prefix} {relative(value)}</time>;
+  const absolute = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" }).format(new Date(value));
+  return <time dateTime={value} title={absolute}>{prefix} {now === null ? absolute : relative(value, now)}</time>;
 }

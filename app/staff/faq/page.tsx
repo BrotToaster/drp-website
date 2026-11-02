@@ -31,13 +31,13 @@ export default async function StaffFaqPage({ searchParams }: { searchParams: Pro
 
   return (
     <PortalShell authorization={authorization} title="FAQ" description="Häufige Fragen erstellen, sortieren und veröffentlichen." section="staff">
-      {(query.error || query.saved) && <p className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>{query.error ? "FAQ konnte nicht gespeichert werden." : "FAQ wurde gespeichert."}</p>}
-      {canManage && <details className="surface mb-5 p-6"><summary className="cursor-pointer font-semibold text-[#efc76e]">Neue Frage hinzufügen</summary><form action={saveFaqAction} className="mt-6 grid gap-4">{fields()}</form></details>}
+      {(query.error || query.saved) && <p className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[var(--danger-ink)]" : "bg-[#57c98c]/10 text-[var(--success-ink)]")}>{query.error ? "FAQ konnte nicht gespeichert werden." : "FAQ wurde gespeichert."}</p>}
+      {canManage && <details className="surface mb-5 p-6"><summary className="cursor-pointer font-semibold text-[var(--accent-ink)]">Neue Frage hinzufügen</summary><form action={saveFaqAction} className="mt-6 grid gap-4">{fields()}</form></details>}
       <div className="grid gap-4">
         {items.map((item) => (
           <details key={item.id} className="surface p-6">
-            <summary className="cursor-pointer list-none"><div className="flex justify-between gap-3"><div><h2 className="font-semibold">{item.question}</h2><p className="mt-2 text-xs text-[#777d81]">Aktualisiert {formatDateTime(item.updatedAt)}</p></div><span className={"badge " + (item.visible ? "badge-gold" : "")}>{item.visible ? "Sichtbar" : "Versteckt"}</span></div></summary>
-            {canManage && <><form action={saveFaqAction} className="mt-6 grid gap-4 border-t border-white/[0.07] pt-6">{fields(item)}</form><form action={deleteFaqAction} className="mt-3"><input type="hidden" name="id" value={item.id} /><ConfirmSubmitButton message="Diese FAQ wirklich löschen?">Löschen</ConfirmSubmitButton></form></>}
+            <summary className="cursor-pointer list-none"><div className="flex justify-between gap-3"><div><h2 className="font-semibold">{item.question}</h2><p className="mt-2 text-xs text-[var(--muted)]">Aktualisiert {formatDateTime(item.updatedAt)}</p></div><span className={"badge " + (item.visible ? "badge-gold" : "")}>{item.visible ? "Sichtbar" : "Versteckt"}</span></div></summary>
+            {canManage && <><form action={saveFaqAction} className="mt-6 grid gap-4 border-t border-[var(--line)] pt-6">{fields(item)}</form><form action={deleteFaqAction} className="mt-3"><input type="hidden" name="id" value={item.id} /><ConfirmSubmitButton message="Diese FAQ wirklich löschen?">Löschen</ConfirmSubmitButton></form></>}
           </details>
         ))}
       </div>

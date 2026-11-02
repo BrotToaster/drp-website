@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "env": {
+    "DRP_HOSTED_PREVIEW": "true",
+    "AUTH_DEMO_MODE": "false",
+    "DRP_LOCAL_PREVIEW": "false",
+    "PUBLIC_SITE_INDEXING": "false"
+  },
+  "regions": ["fra1"],
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "crons": [{ "path": "/api/preview/cleanup", "schedule": "0 3 * * *" }]
+}

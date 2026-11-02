@@ -30,11 +30,11 @@ export default async function TicketAdminPage() {
               <label className="flex min-h-12 items-center gap-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={category.enabled} /> Aktiv</label>
               <SubmitButton variant="secondary">Kategorie speichern</SubmitButton>
             </form>
-            <div className="mt-6 grid gap-3 border-t border-white/[0.07] pt-6">
+            <div className="mt-6 grid gap-3 border-t border-[var(--line)] pt-6">
               {roles.map((role) => {
                 const access = role.ticketAccesses.find((item) => item.categoryId === category.id);
                 return (
-                  <form action={saveTicketAccessAction} key={role.id} className="grid gap-3 rounded-xl border border-white/[0.07] p-4 lg:grid-cols-[180px_1fr_auto] lg:items-center">
+                  <form action={saveTicketAccessAction} key={role.id} className="grid gap-3 rounded-xl border border-[var(--line)] p-4 lg:grid-cols-[180px_1fr_auto] lg:items-center">
                     <input type="hidden" name="roleId" value={role.id} />
                     <input type="hidden" name="categoryId" value={category.id} />
                     <strong className="text-sm">{role.name}</strong>

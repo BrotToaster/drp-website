@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { PrismaClient } from "@prisma/client";
 
@@ -5,8 +7,8 @@ const datasourceUrl = process.env.NETLIFY_DB_URL?.trim() || process.env.DATABASE
 if (!datasourceUrl || !/^postgres(?:ql)?:\/\//i.test(datasourceUrl)) {
   throw new Error("Zum Seeden wird eine PostgreSQL-URL in NETLIFY_DB_URL oder DATABASE_URL benötigt.");
 }
-const prisma = new PrismaClient({ datasourceUrl });
-const fixture = JSON.parse(await readFile(new URL("../data/rules.fixture.json", import.meta.url), "utf8"));
+const cliPrisma = new PrismaClient({ datasourceUrl });
+
 
 const permissionDefinitions = [
   ["staff.access", "Staff-Panel öffnen", "Zugang"],
@@ -73,7 +75,8 @@ function paragraph(text) {
   return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
 }
 
-async function main() {
+export async function seedBase(prisma = cliPrisma) {
+  const fixture = JSON.parse(await readFile(path.join(process.cwd(), "data/rules.fixture.json"), "utf8"));
   const permissions = new Map();
   for (const [key, label, group] of permissionDefinitions) {
     const item = await prisma.permission.upsert({
@@ -246,7 +249,7 @@ async function main() {
   if (!configuredDefault) {
     const fallback = roles.get("PLAYER") || Array.from(roles.values()).find((role) => role.key !== "OWNER");
     if (fallback) {
-      await prisma.siteSetting.create({ key: "auth.defaultAccessRole", value: { roleId: fallback.id } });
+      await prisma.siteSetting.create({ data: { key: "auth.defaultAccessRole", value: { roleId: fallback.id } } });
     }
   }
   for (const [id, key, enabled] of [
@@ -259,10 +262,10 @@ async function main() {
   }
 }
 
-main()
-  .then(() => prisma.$disconnect())
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) seedBase()
+  .then(() => cliPrisma.$disconnect())
   .catch(async (error) => {
     console.error(error);
-    await prisma.$disconnect();
+    await cliPrisma.$disconnect();
     process.exit(1);
   });

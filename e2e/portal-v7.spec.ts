@@ -24,8 +24,8 @@ test("Newsbeiträge verwenden den responsiven Lesebereich", async ({ page }) => 
   }
 });
 
-test("Formularfelder verwenden ein dunkles Farbschema", async ({ page }) => {
+test("Formularfelder verwenden das helle Farbschema", async ({ page }) => {
   await page.goto("/login");
   const colorScheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
-  expect(colorScheme).toContain("dark");
+  expect(colorScheme).toContain("light");
 });

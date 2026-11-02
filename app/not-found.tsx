@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+export const metadata = { title: "Seite nicht gefunden", description: "Diese Seite ist nicht verfügbar. Zurück zur DRP-Startseite.", robots: { index: false } };
+
 export default function NotFound() {
   return (
     <section className="container-shell grid min-h-[650px] place-items-center py-20 text-center">

@@ -20,7 +20,7 @@ export function InternalWorkbookViewer({ workbook }: { workbook: WorkbookSnapsho
     </div>
     <div className="workbook-scroll" tabIndex={0} aria-label={`Tabelle ${sheet.name}`}>
       <table><thead>{rows[0] && <tr>{rows[0].map((cell, index) => <th key={index} scope="col">{cell || `Spalte ${index + 1}`}</th>)}</tr>}</thead><tbody>{rows.slice(1).map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table>
-      {rows.length <= 1 && <p className="p-6 text-sm text-[#777d81]">Keine passenden Tabellenzeilen gefunden.</p>}
+      {rows.length <= 1 && <p className="p-6 text-sm text-[var(--muted)]">Keine passenden Tabellenzeilen gefunden.</p>}
     </div>
   </section>;
 }

@@ -1,7 +1,10 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
 import { auth, signIn } from "@/auth";
+import { secureApplicationCookies } from "@/lib/local-mode";
 import {
   createAccountLinkToken,
   type AccountLinkIntent,
@@ -9,18 +12,22 @@ import {
 } from "@/lib/account-link";
 
 export async function loginWithDiscordAction() {
+  if (hostedPreviewEnabled()) redirect("/login");
   await signIn("discord", { redirectTo: "/dashboard" });
 }
 
 export async function loginWithRobloxAction() {
+  if (hostedPreviewEnabled()) redirect("/login");
   await signIn("roblox", { redirectTo: "/dashboard" });
 }
 
 export async function registerWithDiscordAction() {
+  if (hostedPreviewEnabled()) redirect("/login");
   await signIn("discord", { redirectTo: "/registrieren" });
 }
 
 export async function registerWithRobloxAction() {
+  if (hostedPreviewEnabled()) redirect("/login");
   await signIn("roblox", { redirectTo: "/registrieren" });
 }
 
@@ -29,6 +36,7 @@ async function authorizeProviderChange(
   intent: AccountLinkIntent,
   redirectTo: string,
 ) {
+  if (hostedPreviewEnabled()) redirect("/dashboard/profil?preview=offline");
   const session = await auth();
   if (!session?.user?.id) {
     await signIn(provider, { redirectTo: "/registrieren" });
@@ -38,7 +46,7 @@ async function authorizeProviderChange(
   store.set("drp-account-link", createAccountLinkToken(session.user.id, provider, intent), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureApplicationCookies(),
     path: "/",
     maxAge: 10 * 60,
   });

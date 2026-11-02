@@ -25,5 +25,5 @@ export async function GET(request: Request) {
     return expandCalendarRevision({ ...revision, event }, start, end);
   });
   const occurrences = selected.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()).map(({ id, revision, startsAt, endsAt }) => ({ id, eventId: revision.event.id, slug: revision.event.slug, title: revision.title, summary: revision.summary, category: { id: revision.event.category.id, title: revision.event.category.title, color: revision.event.category.color }, startsAt, endsAt, allDay: revision.allDay, location: revision.location, recurrence: revision.recurrenceFrequency, status: revision.status }));
-  return NextResponse.json({ generatedAt: now, occurrences }, { headers: { "cache-control": "public, s-maxage=60, stale-while-revalidate=300" } });
+  return NextResponse.json({ generatedAt: now, occurrences }, { headers: { "cache-control": staffMode ? "private, no-store" : "public, s-maxage=60, stale-while-revalidate=300" } });
 }

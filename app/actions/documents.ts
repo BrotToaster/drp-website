@@ -1,5 +1,8 @@
 "use server";
 
+import { fetchImportBytes } from "@/lib/bounded-fetch";
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
+
 import type { InternalDocumentSourceType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -333,20 +336,17 @@ async function storeImportedDocument(input: {
 }
 
 async function fetchImportSource(url: string) {
-  const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-  if (!response.ok) throw new Error(`Google antwortete mit HTTP ${response.status}.`);
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 25_000_000) throw new Error("Die Quelldatei ist größer als 25 MB.");
-  return buffer;
+  return fetchImportBytes(url, ["docs.google.com", "drive.google.com", "*.googleusercontent.com"]);
 }
 
 export async function importInternalDocumentPresetAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (hostedPreviewEnabled()) return { ok: false, code: "FORBIDDEN", message: "Externe Importe sind in der Entscheidungsvorschau abgeschaltet." };
   const presetKey = value(formData, "presetKey");
   const categoryId = value(formData, "categoryId");
   const preset = internalDocumentPresets.find((item) => item.key === presetKey);
   try {
     const { user } = await requirePermission("documents.manage_categories");
-    if (!preset || !categoryId || !(await prisma.internalDocumentCategory.count({ where: { id: categoryId } }))) {
+    if (!preset || !preset.externalId || !categoryId || !(await prisma.internalDocumentCategory.count({ where: { id: categoryId } }))) {
       return { ok: false, code: "VALIDATION", message: "Importquelle oder Kategorie ist ungültig." };
     }
     if (preset.type === "UPLOAD_DOCX" || preset.type === "UPLOAD_XLSX") {
@@ -383,6 +383,7 @@ export async function importInternalDocumentPresetAction(_previous: ActionResult
 }
 
 export async function importUploadedInternalDocumentAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (hostedPreviewEnabled()) return { ok: false, code: "FORBIDDEN", message: "Externe Importe sind in der Entscheidungsvorschau abgeschaltet." };
   const presetKey = value(formData, "presetKey");
   const categoryId = value(formData, "categoryId");
   const mediaId = value(formData, "sourceMediaId");
@@ -393,9 +394,7 @@ export async function importUploadedInternalDocumentAction(_previous: ActionResu
     if (!preset || !categoryId || !asset || asset.visibility !== "INTERNAL" || asset.kind !== "DOCUMENT") return { ok: false, code: "VALIDATION", message: "Bitte lade die passende interne Quelldatei hoch." };
     const expected = preset.type === "UPLOAD_XLSX" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     if (asset.mimeType !== expected) return { ok: false, code: "VALIDATION", message: preset.type === "UPLOAD_XLSX" ? "Für diese Quelle wird eine XLSX-Datei benötigt." : "Für diese Quelle wird eine DOCX-Datei benötigt." };
-    const response = await fetch(createCloudinaryPrivateDownloadUrl(asset.publicId, asset.resourceType), { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-    if (!response.ok) throw new Error("Die hochgeladene Quelldatei konnte nicht geladen werden.");
-    const buffer = Buffer.from(await response.arrayBuffer());
+    const buffer = await fetchImportBytes(createCloudinaryPrivateDownloadUrl(asset.publicId, asset.resourceType), ["api.cloudinary.com", "res.cloudinary.com"]);
     const structuredData = preset.type === "UPLOAD_XLSX" ? await parseWorkbook(buffer) : null;
     const content = preset.type === "UPLOAD_DOCX"
       ? await parseDocx(buffer) as NonNullable<ReturnType<typeof parseContentJson>>

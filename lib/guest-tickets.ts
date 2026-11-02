@@ -1,7 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { GuestTicketAccess } from "@prisma/client";
+import { authSigningSecret } from "@/lib/server-secret";
 
-const secret = () => process.env.AUTH_SECRET || "drp-local-demo-secret-change-in-production";
+const secret = authSigningSecret;
 
 export function createGuestTicketToken() {
   return randomBytes(32).toString("base64url");

@@ -1,0 +1,76 @@
+name: Website checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: drp_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/drp_ci
+      AUTH_SECRET: synthetic-ci-only-key-which-never-authenticates-real-users
+      AUTH_DEMO_MODE: "true"
+      DRP_LOCAL_PREVIEW: "true"
+      SITE_URL: http://localhost:3000
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      AUTH_DISCORD_ID: synthetic-discord-id
+      AUTH_DISCORD_SECRET: synthetic-discord-secret
+      AUTH_ROBLOX_ID: synthetic-roblox-id
+      AUTH_ROBLOX_SECRET: synthetic-roblox-secret
+      PUBLIC_SITE_INDEXING: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:deploy
+      - run: npm run db:seed
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run check:dependencies
+      - run: npm run build
+      - run: npm run check:secrets
+      - name: Scan source and history for secrets
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz' | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks git --redact --no-banner .
+      - run: npx playwright install --with-deps chromium
+      - name: Browser regression checks
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 > /tmp/drp.log 2>&1 &
+          for i in $(seq 1 45); do curl -fsS http://localhost:3000/api/health && break || sleep 1; done
+          PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e -- --project=desktop --project=mobile
+      - name: Isolated hosted-preview tests
+        run: |
+          mkdir -p runtime logs
+          npm run preview:credentials -- runtime/preview.env
+          node e2e/setup-preview.mjs
+          node --env-file=runtime/preview.env scripts/preview.mjs init
+          node --import tsx e2e/check-preview-isolation.mjs
+          node scripts/preview-server.mjs runtime/preview.env > /tmp/drp-preview.log 2>&1 &
+          for i in $(seq 1 45); do curl -s -o /dev/null http://localhost:3108/ && break || sleep 1; done
+          PLAYWRIGHT_BASE_URL=http://localhost:3108 PLAYWRIGHT_PREVIEW_TESTS=true npm run test:e2e -- e2e/hosted-preview.spec.ts
+          PLAYWRIGHT_BASE_URL=http://localhost:3108 PLAYWRIGHT_PREVIEW_TESTS=true PLAYWRIGHT_PREVIEW_RESET_TESTS=true npm run test:e2e -- e2e/hosted-preview.spec.ts --project=desktop --workers=1 --grep 'administrative Rücksetzung'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: test-results/
+          retention-days: 3
