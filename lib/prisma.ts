@@ -6,12 +6,21 @@ import { assertPreviewDatabase } from "@/prisma/preview-guard.mjs";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function getDatasourceUrl() {
-  if (!process.env.DATABASE_URL?.trim() && process.env.NETLIFY_DB_URL?.trim()) {
+  const preview = hostedPreviewEnabled();
+  const configuredUrl = (preview && process.env.PREVIEW_DATABASE_URL?.trim()) || process.env.DATABASE_URL?.trim();
+  if (!configuredUrl && !preview && process.env.NETLIFY_DB_URL?.trim()) {
     return getConnectionString();
   }
 
-  const configuredUrl = process.env.DATABASE_URL?.trim();
   if (configuredUrl && /^postgres(?:ql)?:\/\//i.test(configuredUrl)) {
+    if (preview) {
+      // An explicit preview target also works with provider-managed DATABASE_URL.
+      // Bound each instance's connections, including when using direct Postgres.
+      const url = new URL(configuredUrl);
+      url.searchParams.set("connection_limit", "1");
+      url.searchParams.set("pool_timeout", "15");
+      return url.toString();
+    }
     return configuredUrl;
   }
 

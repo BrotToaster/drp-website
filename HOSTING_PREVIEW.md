@@ -54,14 +54,21 @@ Die Vercel-Konfiguration dieses Branches setzt den Vorschaumodus bereits als Sta
 - `DRP_HOSTED_PREVIEW=true`, `AUTH_DEMO_MODE=false`, `DRP_LOCAL_PREVIEW=false`, `PUBLIC_SITE_INDEXING=false`.
 - `SITE_URL` und `AUTH_URL` auf dieselbe stabile HTTPS-Adresse dieses Projekts setzen; keine fremden Host-Header als Konfigurationsquelle verwenden.
 - `AUTH_TRUST_HOST=true`, den erzeugten `AUTH_SECRET` und die Datenbankverbindungen samt `DRP_PREVIEW_DATABASE_ID`.
+- `PREVIEW_DATABASE_URL` ausdrücklich auf die isolierte Vorschau setzen. Im Vorschaumodus hat dieser Wert Vorrang vor `DATABASE_URL`; jede Instanz verwendet höchstens eine Datenbankverbindung.
 - `PREVIEW_ACCESS_HASH`, die drei `PREVIEW_*_PASSWORD_HASH`-Werte sowie `CRON_SECRET` und `CRON_SECRET_HASH`.
 - `TRUST_PROXY_HTTPS=true`, `TRUST_PROXY_CLIENT_IP=false` lassen. Client-IP-Vertrauen erst nach Prüfung des vorgeschalteten Proxys aktivieren.
 - `PREVIEW_OPERATOR_NAME`, `PREVIEW_OPERATOR_EMAIL` und `PREVIEW_OPERATOR_CONFIRMED=true` erst nach Ergänzung der tatsächlichen verantwortlichen Stelle. Diese Angaben können direkt beim Hoster eingetragen werden; sie müssen weder in Git stehen noch im Chat offengelegt werden.
-- `HOSTING_PROVIDER`, `HOSTING_LOCATION`, `SERVER_LOG_RETENTION_DAYS` passend zu den tatsächlichen Diensteinstellungen setzen. Vor einer gehosteten Freischaltung die Datenschutzhinweise und Dienstleisterverarbeitung abgleichen.
+- `HOSTING_PROVIDER`, `HOSTING_LOCATION` und die Protokollfristen passend zu den tatsächlichen Diensteinstellungen setzen. `SERVER_LOG_RETENTION_TEXT` kann unterschiedliche Protokollarten präzise beschreiben; ohne diesen Wert gilt die bisherige Angabe `SERVER_LOG_RETENTION_DAYS`. Vercel Hobby stellt Laufzeitprotokolle für eine Stunde bereit, Build-Protokolle haben eine getrennte Aufbewahrung; siehe [Vercel-Protokollgrenzen](https://vercel.com/docs/limits#logs). Vor einer gehosteten Freischaltung die Datenschutzhinweise und Dienstleisterverarbeitung abgleichen.
 
 Keine echten Discord-, Roblox-, Cloudinary-, Melonly- oder Bot-Zugangsdaten in dieses Vorschauprojekt kopieren. Ohne bestätigten echten Namen und Kontakt bleibt die externe Vorschau mit HTTP 503 gesperrt. Das ist eine technische Freischaltschranke, keine juristische Prüfung. Die Datenschutzerklärung bleibt als Vorlage kenntlich, solange die gespeicherten Angaben nicht abschließend gepflegt sind.
 
 Die Verantwortlichenangaben der gehosteten Vorschau werden aus der bestätigten Hostingkonfiguration gelesen. Testadministratoren können sie nicht durch Änderungen an Beispieldaten überschreiben.
+
+### Alternative: Prisma Postgres über Vercel
+
+Falls Neon nicht erreichbar ist, kann eine neue Prisma-Postgres-Datenbank im kostenlosen Vercel-Marketplace-Tarif verwendet werden. Ausschließlich eine leere Datenbank anlegen und mit dem Vorschauprojekt verbinden. Die normale PostgreSQL-Verbindung verwenden, keine ältere `prisma+postgres://`-Adresse. Siehe [Anbieteranleitung](https://www.prisma.io/docs/guides/postgres/vercel).
+
+Die Integration verwaltet unter anderem `DATABASE_URL` (direkt) und `DATABASE_URL_POOLED`. Diese Werte müssen nicht überschrieben werden. `DIRECT_URL` auf die direkte Verbindung setzen und `PREVIEW_DATABASE_URL` auf die für diese Vorschau geprüfte Verbindung. Vor dem Deployment beide Ziele auf Erreichbarkeit und die passende Datenbankkennung prüfen. Wenn der Anbieter-Pool nicht funktioniert, kann die kleine Entscheidungsvorschau ausdrücklich die geprüfte Direktverbindung verwenden. Die Grenze von einer Verbindung pro Instanz ersetzt keine Kapazitätsprüfung bei mehreren Instanzen oder für echten Betrieb. Region und Datenschutzhinweise auf den tatsächlich gewählten Anbieter anpassen.
 
 Nach dem Einrichten `npm run check:preview` mit den jeweiligen Umgebungswerten ausführen. Für einen lokalen Test müssen beide Ursprünge beispielsweise auf `http://localhost:3108` gesetzt werden. Dort dürfen deutlich gekennzeichnete Musterangaben verwendet werden. Der lokale Starthelfer bindet nur an Loopback und deaktiviert zusätzlich alle echten Integrationsschlüssel.
 
