@@ -1,6 +1,8 @@
 "use server";
 
 import { isPublicImage } from "@/lib/public-media";
+import { communityFactions } from "@/lib/community-assets";
+import { groupHomepageCards } from "@/lib/homepage-factions";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -69,7 +71,7 @@ const roleCardSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(2).max(24),
   title: z.string().min(2).max(100),
-  description: z.string().min(10).max(800),
+  description: z.string().max(800),
   imageId: z.string().optional(),
   targetUrl: optionalUrl,
   linkLabel: z.string().max(50).optional(),
@@ -80,9 +82,12 @@ const roleCardSchema = z.object({
 export async function saveHomepageRoleCardAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
     const { user } = await requirePermission("site.manage");
+    const factionCode = value(formData, "factionCode");
+    const faction = communityFactions.find(item => item.code === factionCode);
+    if (factionCode && !faction) return { ok: false, code: "VALIDATION", message: "Diese Hauptfraktion ist nicht bekannt." };
     const parsed = roleCardSchema.safeParse({
       id: value(formData, "id") || undefined,
-      code: value(formData, "code"),
+      code: faction?.code || value(formData, "code"),
       title: value(formData, "title"),
       description: value(formData, "description"),
       imageId: value(formData, "imageId") || undefined,
@@ -92,20 +97,31 @@ export async function saveHomepageRoleCardAction(_previous: ActionResult, formDa
       visible: formData.get("visible") === "on",
     });
     if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe alle Kartenfelder. Links müssen HTTPS verwenden." };
+    if (!faction && parsed.data.description.length < 10) return { ok: false, code: "VALIDATION", message: "Die Beschreibung einer zusätzlichen Rollenkarte braucht mindestens 10 Zeichen." };
     if (parsed.data.imageId) {
       const image = await prisma.mediaAsset.findUnique({ where: { id: parsed.data.imageId }, select: { kind: true, visibility: true, deliveryType: true } });
       if (!isPublicImage(image)) return { ok: false, code: "VALIDATION", message: "Als Kartenmedium ist nur ein Bild erlaubt." };
     }
     const { id, targetUrl, imageId, linkLabel, ...data } = parsed.data;
     await prisma.$transaction(async (tx) => {
-      const card = id
-        ? await tx.homepageRoleCard.update({ where: { id }, data: { ...data, targetUrl: targetUrl || null, imageId: imageId || null, linkLabel: linkLabel || null, editorId: user.id } })
+      // Multiple tabs saving a not-yet-created main faction must share one
+      // existing record, rather than create duplicate public presentations.
+      let recordId = id;
+      if (faction) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(184734984)`;
+        if (!recordId) {
+          const existing = groupHomepageCards(await tx.homepageRoleCard.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] })).factions.find(item => item.code === faction.code)?.card;
+          recordId = existing?.id;
+        }
+      }
+      const card = recordId
+        ? await tx.homepageRoleCard.update({ where: { id: recordId }, data: { ...data, targetUrl: targetUrl || null, imageId: imageId || null, linkLabel: linkLabel || null, editorId: user.id } })
         : await tx.homepageRoleCard.create({ data: { ...data, targetUrl: targetUrl || null, imageId: imageId || null, linkLabel: linkLabel || null, editorId: user.id } });
-      await tx.auditLog.create({ data: { actorId: user.id, action: id ? "HOMEPAGE_ROLE_CARD_UPDATED" : "HOMEPAGE_ROLE_CARD_CREATED", entityType: "HomepageRoleCard", entityId: card.id } });
+      await tx.auditLog.create({ data: { actorId: user.id, action: recordId ? "HOMEPAGE_ROLE_CARD_UPDATED" : "HOMEPAGE_ROLE_CARD_CREATED", entityType: "HomepageRoleCard", entityId: card.id } });
     });
     revalidatePath("/");
     revalidatePath("/admin/website");
-    return { ok: true, message: "Rollenkarte wurde gespeichert." };
+    return { ok: true, message: faction ? "Fraktionsvorstellung wurde gespeichert." : "Rollenkarte wurde gespeichert." };
   } catch {
     return { ok: false, code: "SERVER", message: "Rollenkarte konnte nicht gespeichert werden." };
   }

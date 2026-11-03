@@ -2,6 +2,18 @@
 
 Prüfstand: 3. November 2026. Diese Prüfung dokumentiert konkrete Änderungen und reproduzierbare Tests. Sie ist weder eine rechtliche Freigabe noch ein vollständiger Infrastruktur-Penetrationstest.
 
+## Anschließende Fraktions- und Gestaltungsänderungen
+
+Eine weitere Projekt- und PostgreSQL-Sicherung wurde vor diesem Auftrag angelegt. Alle sechs Hauptfraktionen besitzen jetzt einen gemeinsamen Bereich aus Original-Logo, Beschreibung und optionalem Zusatzbild/Link. Die vorhandenen drei Vorstellungen bleiben maßgeblich; fehlende Texte werden als fehlend ausgewiesen. Zusätzliche und doppelte Alt-Karten bleiben in der separaten Verwaltung erhalten. Es gibt keine neue Migration und keine automatische Datenbefüllung. Ausgeblendete Hauptfraktionen werden nicht durch Standardwerte erneut sichtbar.
+
+Die bestehende Serveraktion verlangt weiterhin `site.manage`, begrenzt Beschreibung und Links und übernimmt nur freigegebene öffentliche Bilder. Beim erstmaligen Speichern einer Hauptfraktion verhindert eine transaktionsgebundene Sperre doppelte Datensätze aus mehreren gleichzeitig geöffneten Formularen. Texte werden als Text ausgegeben; Zeilenumbrüche bleiben erhalten. Die Logos benötigen keine neuen externen Medienabrufe.
+
+Der dunkle Konto-/Supportbereich hatte eine ungültige selbstreferenzielle Akzentvariable sowie einen dunklen Texttoken. Beide sind korrigiert; Text und sekundäre Buttons erreichen in den Browserprüfungen mindestens 4,5:1 Kontrast. Konto und Support sind getrennt, der Footer hat vier beschriftete Navigationsgruppen. Die kleine Startseite verwendet keine Layout-Platzhalter mehr, die beim Scrollen zu den längeren Fraktionsvorstellungen leere Bereiche und Höhenwechsel verursachten.
+
+Produktionsbuild, ESLint und TypeScript bestehen; **131 Unit-Tests** und **81 reguläre Desktop-/Mobil-Browsertests** sind erfolgreich. Die neue Schreibprüfung speichert eine synthetische Vorstellung, prüft sie nach einem Neuladen, blendet die Fraktion aus und stellt anschließend den neutralen Teststand wieder her. Die Bildschirmprüfung umfasst Desktop/Mobil und beide Designs. Browser-Build-Scans gegen die 13 lokalen und 26 Hosting-Geheimnisse bleiben ohne Fund. Die folgenden Testzahlen dokumentieren die vorherige Sicherheitsrunde.
+
+Die [Funktionsübersicht](./FUNKTIONSUEBERSICHT.md) enthält 70 nummerierte Funktionen mit Zugangsbedingungen und ausdrücklicher Unterscheidung zwischen Portal, externen Diensten, Vorschau und Betriebswerkzeugen.
+
 ## Ergänzende Prüfung vom 3. November
 
 Vor den Änderungen wurden eine neue Projektkopie einschließlich Git-Verlauf und Konfiguration sowie eine PostgreSQL-Sicherung unter den ignorierten `backups/` angelegt. Es gibt keine Schemaänderung, Bestandsdatenübernahme oder Rücksetzung der gehosteten Datenbank durch diesen Prüfauftrag.
@@ -34,7 +46,7 @@ Das öffentliche Profil [@deutschland.rp.erlc](https://www.tiktok.com/@deutschla
 
 Der erneute Abhängigkeits-Audit meldet weiterhin **0 kritisch, 0 hoch, 21 mittel**. Die unten beschriebene Bewertung bleibt bestehen. Es wurde kein vollständiger externer Penetrationstest durchgeführt. Für einen späteren echten Betrieb bleiben insbesondere Drittanbieter-Logins und Upload-Verifikation mit echten Konten, Betreiber-/Datenschutzkonfiguration, Providerlimits und die Missbrauchsgrenzen angemeldeter Schreibaktionen separat im tatsächlichen Hosting zu prüfen. Der Fünf-Minuten-Job läuft in der Hostingvorschau weiterhin nicht automatisch.
 
-### Abnahme des aktuellen Stands
+### Abnahme der vorausgegangenen Sicherheitsrunde
 
 - ESLint, TypeScript, Produktionsbuild und alle **125 Unit-Tests** erfolgreich.
 - **80 reguläre Desktop-/Mobil-Browsertests**, dazu **8 getrennte Vorschaurollen-/Zugangstests** und **1 serieller Rücksetztest** erfolgreich. Der reguläre Lauf überspringt absichtlich die zehn separat gestarteten Vorschaufälle.

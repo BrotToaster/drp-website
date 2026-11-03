@@ -14,7 +14,6 @@ import { getHomepageSettings } from "@/lib/site-settings";
 import { HomeMotion } from "@/components/home-motion";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { InteractiveLink } from "@/components/interactive-link";
-import { communityFactions } from "@/lib/community-assets";
 import { GermanSpeakingCommunity } from "@/components/german-speaking-community";
 
 export const dynamic = "force-dynamic";
@@ -76,16 +75,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="home-departments section-space">
+      <section id="hauptfraktionen" className="home-departments section-space">
         <div className="container-shell">
           <SectionHeading
-            title="Wo beginnt deine Geschichte?"
-            copy="Wähle deinen Weg, entwickle deinen Charakter und werde Teil eines lebendigen Liberty County."
+            title="Unsere Hauptfraktionen."
+            copy="Lerne die Fraktionen im DRP-Roleplay kennen. Hier findest du ihre Vorstellungen und weiterführende Informationen."
           />
           <ul className="community-factions" aria-label="Hauptfraktionen im Roleplay">
-            {communityFactions.map(faction => <li key={faction.logo}><ContentImage src={faction.logo} alt={`Logo: ${faction.name}`} width={160} height={160} sizes="(max-width: 767px) 96px, 112px" /><span>{faction.name}</span></li>)}
+            {homepage.factions.map(faction => <li key={faction.code} data-faction={faction.code}>
+              <ContentImage src={faction.logo} alt={`Logo: ${faction.name}`} width={160} height={160} sizes="(max-width: 767px) 64px, 88px" />
+              <div><h3>{faction.name}</h3><p className={!faction.copy ? "faction-description-empty" : undefined}>{faction.copy || "Informationen zu Aufgaben und Einstieg folgen."}</p>
+                {faction.imageUrl && <ContentImage className="faction-scene" src={faction.imageUrl} alt={`Einblick in ${faction.name}`} width={640} height={360} sizes="(max-width: 767px) 100vw, 440px" />}
+                {faction.targetUrl && <a href={faction.targetUrl} target="_blank" rel="noopener noreferrer">{faction.linkLabel || "Mehr erfahren"} ↗</a>}
+              </div>
+            </li>)}
           </ul>
-          <div className="department-grid">
+          {homepage.departments.length > 0 && <div className="mt-14"><h3 className="text-2xl font-semibold">Weitere Wege im Roleplay</h3><div className="department-grid">
             {homepage.departments.map((department, index) => (
               <SpotlightCard key={department.code + index} className="department-card group overflow-hidden">
                 {department.imageUrl && <div className="department-image"><ContentImage src={department.imageUrl} alt={`Einblick in ${department.name}`} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover" /></div>}
@@ -94,7 +99,7 @@ export default async function HomePage() {
                 {department.targetUrl && <a href={department.targetUrl} target="_blank" rel="noreferrer" className="text-[var(--accent-ink)]">{department.linkLabel || "Mehr erfahren"} ↗</a>}
               </SpotlightCard>
             ))}
-          </div>
+          </div></div>}
         </div>
       </section>
 
@@ -136,15 +141,13 @@ export default async function HomePage() {
 
       <section className="pb-24">
         <div className="container-shell">
-          <div className="drp-system-cta surface relative overflow-hidden px-6 py-16 md:px-16 md:py-20">
-            <div className="relative mx-auto max-w-2xl text-center">
-              <h2 className="section-title">Website, Konto und Staff-Werkzeuge an einem Ort.</h2>
-              <p className="body-large mt-5">Öffne dein DRP-Konto für Profil, Regelbestätigung und Website-Tickets. Operative Melonly-Aufgaben bleiben klar verlinkt.</p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link href="/dashboard" className="button button-primary">DRP-System öffnen</Link>
-                <a href={homepage.discordSupportUrl} target="_blank" rel="noreferrer" className="button button-secondary">Discord-Support</a>
-              </div>
+          <div className="drp-system-cta home-account-support">
+            <div>
+              <h2 className="section-title">Dein Konto.<br />Dein Überblick.</h2>
+              <p>Profil, Regelbestätigung und deine Website-Tickets findest du in Mein DRP.</p>
+              <Link href="/dashboard" className="button button-primary">Mein DRP öffnen</Link>
             </div>
+            <div className="home-account-help"><h3>Du brauchst Hilfe?</h3><p>Fragen zur Website oder zu deinem Konto kannst du hier stellen. Bei Anliegen zum Spiel und zur Community hilft dir das Team auf Discord.</p><div className="home-support-actions"><Link href="/kontakt" className="button button-secondary">Website-Kontakt</Link><a href={homepage.discordSupportUrl} target="_blank" rel="noopener noreferrer" className="button button-secondary">Discord-Support ↗</a></div></div>
           </div>
         </div>
       </section>

@@ -83,8 +83,8 @@ input, textarea { caret-color: var(--accent); }
 .home-hero-facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 24px; color: var(--muted); font-size: 12px; margin-top: 16px; }
 .home-map-stage { max-width: 1080px; margin: 48px auto 0; }
 .cinematic-map, .drp-system-cta {
-  --text: var(--surface-soft); --muted: #babac0; --surface: #17191e; --surface-soft: #24262d; --line: rgba(255,255,255,.15); --line-strong: rgba(255,255,255,.22);
-  --accent-ink: var(--accent-ink); color: var(--text);
+  --text: #f5f5f7; --muted: #c8cbd0; --surface: #17191e; --surface-soft: #24262d; --line: rgba(255,255,255,.15); --line-strong: rgba(255,255,255,.22);
+  --accent-ink: #e3b58d; color: var(--text);
 }
 .drp-home .cinematic-map-frame { min-height: 360px; border-radius: 22px; border-color: #282b31; transform: none; box-shadow: none; background: #101319; }
 .drp-home .cinematic-map-image { inset: 0; transform: none; filter: saturate(.78) contrast(1.08) brightness(.9); }
@@ -104,6 +104,9 @@ input, textarea { caret-color: var(--accent); }
 [data-hud-edge] { background: var(--accent-ink); }
 .drp-home section.section-space { border-color: var(--line); }
 .home-departments { background: var(--surface-soft); }
+/* The compact homepage should have a stable height when jumping to factions
+   or account/support; placeholder containment caused mobile scroll jumps. */
+.drp-home section.section-space { content-visibility: visible; contain-intrinsic-size: none; }
 .department-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; margin-top: 44px; }
 .department-card { padding: 30px; border: 0; background: var(--surface); border-radius: 16px; min-height: 220px; }
 .department-icon { color: var(--accent-ink); width: 34px; height: 34px; margin-bottom: 28px; }
@@ -111,10 +114,13 @@ input, textarea { caret-color: var(--accent); }
 .department-card p { line-height: 1.65; color: var(--muted); font-size: 14px; }
 .department-card a { display: inline-flex; min-height: 44px; align-items: center; margin-top: 20px; font-size: 14px; }
 .department-card > .department-image { height: 150px; margin: -30px -30px 28px; position: relative; overflow: hidden; }
-.community-factions { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 24px; padding: 40px 0; margin: 32px 0 0; border-block: 1px solid var(--line); list-style: none; }
-.community-factions li { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
-.community-factions img { width: 112px; height: 112px; object-fit: contain; }
-.community-factions span { max-width: 20ch; color: var(--text); font-size: 14px; font-weight: 550; line-height: 1.4; }
+.community-factions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 56px; margin: 40px 0 0; padding: 0; list-style: none; }
+.community-factions > li { display: grid; grid-template-columns: 88px minmax(0,1fr); align-items: start; gap: 24px; padding: 32px 0; border-top: 1px solid var(--line-strong); text-align: left; min-width: 0; }
+.community-factions > li > img { width: 88px; height: 88px; object-fit: contain; }
+.community-factions h3 { font-size: 21px; font-weight: 600; line-height: 1.25; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.community-factions p { max-width: 56ch; margin-top: 12px; color: var(--muted); font-size: 14px; line-height: 1.7; white-space: pre-line; overflow-wrap: anywhere; }
+.community-factions a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; color: var(--accent-ink); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
+.community-factions .faction-scene { width: 100%; height: auto; max-height: 230px; object-fit: cover; border-radius: 12px; margin-top: 20px; }
 .community-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 40px; }
 .community-scenes figure { min-width: 0; margin: 0; }
 .community-scenes img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 16px; background: var(--surface-soft); }
@@ -132,6 +138,26 @@ input, textarea { caret-color: var(--accent); }
 .news-placeholder svg { width: 100px; height: 100px; stroke-width: .9; }
 .news-card-media .badge { color: var(--text); border: 0; background: rgba(255,255,255,.95); }
 .drp-system-cta { border: 0; border-radius: 22px; }
+.home-account-support { display: grid; grid-template-columns: 1.1fr 1fr; gap: 64px; padding: 56px; --accent: #d19f72; --accent-hover: #e3b58d; --accent-contrast: #242320; --control-line: #8b8c92; }
+.home-account-support p { max-width: 52ch; margin-top: 20px; color: var(--muted); font-size: 16px; line-height: 1.7; }
+.home-account-support .button { margin-top: 28px; }
+.home-account-help { padding-left: 48px; border-left: 1px solid var(--line); }
+.home-account-help h3 { font-size: 23px; font-weight: 600; line-height: 1.3; letter-spacing: -.025em; }
+.home-support-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.home-account-support .button-secondary { background: transparent; color: var(--text); border-color: var(--control-line); }
+.home-account-support .button-secondary:hover { background: #30323b; }
+.site-footer-main { display: grid; grid-template-columns: minmax(200px,.85fr) minmax(0,2fr); gap: 56px; padding-block: 64px; }
+.footer-link-groups { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 28px; }
+.footer-link-groups h2 { color: var(--text); font-size: 14px; font-weight: 650; line-height: 1.4; margin-bottom: 16px; }
+.footer-link-groups ul { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.footer-link-groups a { display: inline-flex; align-items: center; min-height: 36px; color: var(--muted); font-size: 13px; line-height: 1.5; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.footer-link-groups a:hover { color: var(--accent-ink); text-decoration: underline; }
+.faction-editor-summary { display: flex; gap: 18px; align-items: center; cursor: pointer; list-style: none; }
+.faction-editor-summary > img { width: 48px; height: 48px; object-fit: contain; flex: none; }
+.faction-editor-summary > span:first-of-type { flex: 1; min-width: 0; }
+.faction-editor-summary strong { display: block; font-size: 16px; line-height: 1.4; }
+.faction-editor-summary span span { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.faction-editor-summary > span:last-child { font-size: 24px; color: var(--accent-ink); }
 body > footer, body > :is(div,section) > footer { background: var(--surface-soft); }
 footer .eyebrow, footer p[class*="uppercase"] { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 12px; }
 footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -185,14 +211,22 @@ footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .calendar-shell [data-color-scheme] button[aria-selected="true"] { color: var(--accent-ink); background: var(--accent-soft); border-color: var(--accent-line); }
 .calendar-shell [data-color-scheme] button:disabled { color: var(--muted); background: var(--surface-soft); opacity: .65; }
 @media (max-width: 1100px) {
+  .site-footer-main { grid-template-columns: 1fr; gap: 36px; }
   .public-desktop-nav { gap: 4px; }
   .public-header-row { gap: 14px; }
   .portal-content { width: calc(100% - 40px); }
 }
 @media (max-width: 767px) {
-  .community-factions { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 20px; padding-block: 28px; }
-  .community-factions li:last-child { grid-column: 1 / -1; }
-  .community-factions img { width: 96px; height: 96px; }
+  .community-factions { grid-template-columns: 1fr; margin-top: 28px; }
+  .community-factions > li { grid-template-columns: 64px minmax(0,1fr); gap: 18px; padding-block: 24px; }
+  .community-factions > li > img { width: 64px; height: 64px; }
+  .community-factions h3 { font-size: 20px; }
+  .home-account-support { grid-template-columns: 1fr; gap: 32px; padding: 32px 24px; }
+  .home-account-help { padding-left: 0; padding-top: 32px; border-left: 0; border-top: 1px solid var(--line); }
+  .site-footer-main { grid-template-columns: 1fr; gap: 36px; padding-block: 44px; }
+  .footer-link-groups { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 24px; }
+  .footer-link-groups nav { border-top: 1px solid var(--line); padding-top: 20px; }
+  .footer-link-groups a { min-height: 44px; }
   .community-scenes { grid-template-columns: 1fr; gap: 28px; margin-top: 28px; }
   .container-shell { width: calc(100% - 36px); }
   .section-space { padding-top: 64px; padding-bottom: 64px; }

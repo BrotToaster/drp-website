@@ -8,6 +8,8 @@ Diese Version bereitet eine getrennte, passwortgeschützte Vorschau mit künstli
 
 Die vollständige Anleitung steht in [HOSTING_PREVIEW.md](./HOSTING_PREVIEW.md). Sicherheitsbefunde, Prüfungen und Grenzen stehen in [SECURITY_REVIEW.md](./SECURITY_REVIEW.md). Verwendete Gestaltungskomponenten und lokale Hilfsprogramme sind unter [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) aufgeführt.
 
+Für die nächste Umstrukturierung enthält die [Funktionsübersicht](./FUNKTIONSUEBERSICHT.md) 70 nummerierte Funktionen mit Beschreibung, Zugangsbedingungen und Abgrenzung zu externen Diensten. Die sechs Hauptfraktionsvorstellungen sind unter **Administration → Startseite & Links → Hauptfraktionen** pflegbar.
+
 ## Entwicklung und Prüfung
 
 Voraussetzungen: Node.js 22 ab 22.13, npm und PostgreSQL 17. Zugangsdaten gehören in ignorierte Umgebungsdateien oder in die Secret-Verwaltung des Hosters. Die Datei [.env.example](./.env.example) enthält ausschließlich Vorlagen.

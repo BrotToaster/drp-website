@@ -55,4 +55,4 @@ Die bestehenden Lizenzen der übrigen Projektabhängigkeiten gelten unverändert
 
 ## Community-Aufnahmen und Fraktionslogos
 
-Die fünf Fraktionslogos und zwei Spielaufnahmen unter `public/community` wurden vom Nutzer zur Einbindung bereitgestellt. Die Originale wurden proportional skaliert beziehungsweise komprimiert. Die jeweilige Herkunftsdatei ist in der benachbarten `.json`-Datei vermerkt. Sie werden lokal ausgeliefert; ein zusätzliches Bildernetzwerk wird dafür nicht eingebunden.
+Die sechs Fraktionslogos und zwei Spielaufnahmen unter `public/community` wurden vom Nutzer zur Einbindung bereitgestellt. Die Originale wurden proportional skaliert beziehungsweise komprimiert. Die Herkunft der bisherigen Dateien ist in der benachbarten `.json`-Datei vermerkt. Das ergänzte Landesverwaltungslogo stammt aus der ausdrücklich bereitgestellten Datei `b45062896f0ea4ea7aa15605c17380d6.png` und wird als `factions/landesverwaltung.webp` mit erhaltener Transparenz ausgeliefert. Ein zusätzliches Bildernetzwerk wird dafür nicht eingebunden.
