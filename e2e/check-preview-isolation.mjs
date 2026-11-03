@@ -6,7 +6,9 @@ import { parseEnv } from "node:util";
 const target = process.env.DATABASE_URL;
 const url = new URL(target);
 if (!["localhost", "127.0.0.1"].includes(url.hostname) || !/^\/drp_(?:ci|regression_readiness_\d+)$/.test(url.pathname)) throw new Error("Explizite lokale Regression-/CI-Testdatenbank erforderlich.");
-Object.assign(process.env, parseEnv(fs.readFileSync("runtime/preview.env", "utf8")), { DATABASE_URL: target, NODE_ENV: "production", DRP_HOSTED_PREVIEW: "true" });
+// The preview-specific URL takes precedence over a provider-managed DATABASE_URL.
+// Override both so this negative test actually reaches the unmarked target.
+Object.assign(process.env, parseEnv(fs.readFileSync("runtime/preview.env", "utf8")), { DATABASE_URL: target, PREVIEW_DATABASE_URL: target, NODE_ENV: "production", DRP_HOSTED_PREVIEW: "true" });
 const { prisma } = await import("../lib/prisma.ts");
 const result = { modelQueryBlocked: false, rawQueryBlocked: false };
 try {

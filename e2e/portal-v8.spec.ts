@@ -40,12 +40,14 @@ test("Regelwerksuche bleibt sichtbar und lässt sich per Tastatur zurücksetzen"
   await page.goto("/regelwerk");
   const search = page.getByRole("searchbox", { name: "Regelwerk durchsuchen" });
   await expect(search).toBeVisible();
-  await page.keyboard.press("/");
-  await expect(search).toBeFocused();
   await search.fill("Verkehr");
+  await expect(page.getByRole("heading", { name: "Suchergebnisse", exact: true })).toBeVisible();
   await search.press("Escape");
   await expect(search).toBeVisible();
   await expect(search).toHaveValue("");
+  await page.getByRole("heading", { level: 1, name: "Regelwerk." }).click();
+  await page.keyboard.press("/");
+  await expect(search).toBeFocused();
 });
 
 test("Kontaktseite trennt Gast-, Discord- und Ownership-Ablauf", async ({ page }) => {
