@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { httpsRedirect, securityHeaders } from "@/lib/security-policy";
 import { indexingRequested, isLocalOrigin, siteOrigin } from "@/lib/site-origin";
 import { hostedPreviewEnabled, previewGateAllowed, matchesSecretHash, previewOperatorReady, previewLocalRequest } from "@/lib/preview-mode";
+import { gatewayErrorResponse } from "@/lib/error-response";
 
 export async function middleware(request: NextRequest) {
   // The sharing proxy always replaces Host with its public origin. Direct local
@@ -13,11 +14,11 @@ export async function middleware(request: NextRequest) {
   if (target) return NextResponse.redirect(target, 308);
   if (hostedPreviewEnabled()) {
     const localTest = previewLocalRequest(request.headers.get("host"));
-    if (!localTest && (isLocalOrigin(siteOrigin()) || siteOrigin().protocol !== "https:" || !previewOperatorReady())) return new NextResponse("Die Entscheidungsvorschau ist noch nicht freigeschaltet. Der Betreiber muss seine Verantwortlichen- und Kontaktangaben sowie die HTTPS-Adresse direkt in der Hostingkonfiguration vervollständigen.", { status: 503, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
+    if (!localTest && (isLocalOrigin(siteOrigin()) || siteOrigin().protocol !== "https:" || !previewOperatorReady())) return gatewayErrorResponse(request, 503);
     const cron = request.nextUrl.pathname === "/api/preview/cleanup" && await matchesSecretHash(request.headers.get("authorization")?.replace(/^Bearer /, "") || "", process.env.CRON_SECRET_HASH);
     const privacy = request.nextUrl.pathname === "/datenschutz";
     if (!privacy && !cron && !(await previewGateAllowed(request.headers.get("authorization")))) {
-      return new NextResponse("Geschützte DRP-Entscheidungsvorschau. Benutzername: drp. Zugangsdaten erhältst du vom Betreiber.", { status: 401, headers: { "WWW-Authenticate": 'Basic realm="DRP Entscheidungsvorschau", charset="UTF-8"', "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex, nofollow", "Content-Type": "text/plain; charset=utf-8" } });
+      return gatewayErrorResponse(request, 401, { "WWW-Authenticate": 'Basic realm="DRP Entscheidungsvorschau", charset="UTF-8"' });
     }
     if (/^\/api\/(?:bot|media)(?:\/|$)/.test(request.nextUrl.pathname)) return NextResponse.json({ error: "Externe Schnittstelle in der Testvorschau abgeschaltet." }, { status: 403 });
   }
