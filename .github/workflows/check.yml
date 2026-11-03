@@ -42,6 +42,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - name: Concurrent guest and member ticket numbers
+        run: node --import tsx e2e/check-ticket-concurrency.mjs
       - run: npm run check:dependencies
       - run: npm run build
       - run: npm run check:secrets

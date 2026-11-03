@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { expandCalendarRevision, localDateTimeToUtc } from "@/lib/calendar";
 
 describe("Kalender und Zeitzonen", () => {
+  it("findet tägliche Serien auch nach mehr als 400 Wiederholungen", () => {
+    const items = expandCalendarRevision({ id: "old-daily", startsAt: new Date("2020-01-01T18:00:00Z"), endsAt: new Date("2020-01-01T19:00:00Z"), timeZone: "Europe/Berlin", recurrenceFrequency: "DAILY", recurrenceInterval: 1, recurrenceUntil: null }, new Date("2026-11-01T00:00:00Z"), new Date("2026-11-07T23:59:59Z"));
+    expect(items).toHaveLength(7); expect(items[0].startsAt.toISOString()).toBe("2026-11-01T18:00:00.000Z");
+  });
   it("wandelt Berliner Sommerzeit korrekt in UTC um", () => {
     expect(localDateTimeToUtc("2026-07-15T20:00")?.toISOString()).toBe("2026-07-15T18:00:00.000Z");
   });

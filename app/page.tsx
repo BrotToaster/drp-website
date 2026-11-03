@@ -15,6 +15,7 @@ import { HomeMotion } from "@/components/home-motion";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { InteractiveLink } from "@/components/interactive-link";
 import { communityFactions } from "@/lib/community-assets";
+import { GermanSpeakingCommunity } from "@/components/german-speaking-community";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ export default async function HomePage() {
               <span>Kostenloses Communityportal</span>
               <span>Regelwerk und Kontakt frei zugänglich</span>
             </div>
+            <GermanSpeakingCommunity />
           </div>
 
           <div className="home-map-stage">
@@ -99,6 +101,7 @@ export default async function HomePage() {
       <section className="community-gallery section-space">
         <div className="container-shell">
           <SectionHeading title="Einblicke aus unserer Community." copy="Gemeinsame Momente und Fahrzeuge aus dem DRP-Roleplay." />
+          <a className="community-tiktok-link" href="https://www.tiktok.com/@deutschland.rp.erlc" target="_blank" rel="noopener noreferrer">Unser TikTok-Kanal: @deutschland.rp.erlc <span aria-hidden="true">↗</span></a>
           <div className="community-scenes">
             <figure><ContentImage src="/community/roleplay-gruppe.webp" alt="DRP-Spielcharaktere bei einem gemeinsamen Fototermin vor ihren Einsatzfahrzeugen" width={1440} height={647} sizes="(max-width: 767px) 100vw, 640px" /><figcaption>Ein gemeinsamer Fototermin im Roleplay.</figcaption></figure>
             <figure><ContentImage src="/community/fahrzeugaufstellung.webp" alt="Aufgereihte DRP-Einsatzfahrzeuge mit Spielcharakteren auf einem Parkplatz in Liberty County" width={1440} height={714} sizes="(max-width: 767px) 100vw, 640px" /><figcaption>Fahrzeugaufstellung in Liberty County.</figcaption></figure>

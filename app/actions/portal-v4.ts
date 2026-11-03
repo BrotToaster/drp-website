@@ -1,5 +1,7 @@
 "use server";
 
+import { isPublicImage } from "@/lib/public-media";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/action-result";
@@ -91,8 +93,8 @@ export async function saveHomepageRoleCardAction(_previous: ActionResult, formDa
     });
     if (!parsed.success) return { ok: false, code: "VALIDATION", message: "Bitte prüfe alle Kartenfelder. Links müssen HTTPS verwenden." };
     if (parsed.data.imageId) {
-      const image = await prisma.mediaAsset.findUnique({ where: { id: parsed.data.imageId }, select: { kind: true } });
-      if (image?.kind !== "IMAGE") return { ok: false, code: "VALIDATION", message: "Als Kartenmedium ist nur ein Bild erlaubt." };
+      const image = await prisma.mediaAsset.findUnique({ where: { id: parsed.data.imageId }, select: { kind: true, visibility: true, deliveryType: true } });
+      if (!isPublicImage(image)) return { ok: false, code: "VALIDATION", message: "Als Kartenmedium ist nur ein Bild erlaubt." };
     }
     const { id, targetUrl, imageId, linkLabel, ...data } = parsed.data;
     await prisma.$transaction(async (tx) => {

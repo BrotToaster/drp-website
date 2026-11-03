@@ -17,8 +17,11 @@ export type CalendarOccurrence<T extends CalendarRevisionLike = CalendarRevision
   endsAt: Date;
 };
 
+const formatters = new Map<string, Intl.DateTimeFormat>();
 function zonedParts(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
+  let formatter = formatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",
@@ -27,7 +30,11 @@ function zonedParts(date: Date, timeZone: string) {
     minute: "2-digit",
     second: "2-digit",
     hourCycle: "h23",
-  }).formatToParts(date);
+    });
+    if (formatters.size >= 32) formatters.clear();
+    formatters.set(timeZone, formatter);
+  }
+  const parts = formatter.formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value || 0);
   return { year: get("year"), month: get("month"), day: get("day"), hour: get("hour"), minute: get("minute"), second: get("second") };
 }
@@ -68,7 +75,18 @@ export function expandCalendarRevision<T extends CalendarRevisionLike>(revision:
   const occurrences: CalendarOccurrence<T>[] = [];
   const interval = Math.max(1, revision.recurrenceInterval || 1);
   const finalDate = revision.recurrenceUntil && revision.recurrenceUntil < windowEnd ? revision.recurrenceUntil : windowEnd;
-  for (let index = 0; index < limit; index += 1) {
+  // Start near the visible window; old recurring events must not disappear
+  // after the first 400 repetitions. The margin covers DST and month rollovers.
+  const earliest = new Date(windowStart.getTime() - duration);
+  let first = 0;
+  if (revision.recurrenceFrequency === "DAILY" || revision.recurrenceFrequency === "WEEKLY") {
+    const step = 86400000 * interval * (revision.recurrenceFrequency === "WEEKLY" ? 7 : 1);
+    first = Math.max(0, Math.floor((earliest.getTime() - revision.startsAt.getTime()) / step) - 2);
+  } else if (revision.recurrenceFrequency === "MONTHLY") {
+    const months = (earliest.getUTCFullYear() - revision.startsAt.getUTCFullYear()) * 12 + earliest.getUTCMonth() - revision.startsAt.getUTCMonth();
+    first = Math.max(0, Math.floor(months / interval) - 2);
+  }
+  for (let index = first; index < first + limit; index += 1) {
     const startsAt = occurrenceStart(revision.startsAt, revision.recurrenceFrequency, interval, index, revision.timeZone || "Europe/Berlin");
     if (startsAt > finalDate) break;
     const endsAt = new Date(startsAt.getTime() + duration);

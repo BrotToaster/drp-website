@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/json-request";
 import { NextResponse } from "next/server";
 import { isBotAuthorized } from "@/lib/bot-auth";
 import { applyDiscordRoleMappings } from "@/lib/discord-sync";
@@ -9,7 +10,9 @@ export async function POST(request: Request) {
   if (!isBotAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const parsed = discordMemberSyncSchema.safeParse(await request.json().catch(() => null));
+  const body = await readJsonRequest(request, 2_097_152);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = discordMemberSyncSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültige Mitgliedsdaten", details: parsed.error.flatten() }, { status: 400 });
   }

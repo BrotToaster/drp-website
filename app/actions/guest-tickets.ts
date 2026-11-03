@@ -1,5 +1,7 @@
 "use server";
 
+import { nextTicketNumber } from "@/lib/ticket-number";
+
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -36,8 +38,8 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${fingerprintHash}))::text`;
       const recent = await tx.guestTicketRateLimit.count({ where: { fingerprintHash, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } } });
       if (recent >= 3) throw new Error("GUEST_RATE_LIMIT");
-      const latest = await tx.ticket.aggregate({ _max: { number: true } });
-      const created = await tx.ticket.create({ data: { id: ticketId, number: (latest._max.number || 0) + 1, subject: parsed.data.subject, categoryId: category.id, userId: null } });
+      const number = await nextTicketNumber(tx);
+      const created = await tx.ticket.create({ data: { id: ticketId, number, subject: parsed.data.subject, categoryId: category.id, userId: null } });
       await tx.guestTicketAccess.create({ data: { id: accessId, ticketId: created.id, tokenHash: hashGuestTicketToken(token), displayName: parsed.data.displayName, discordContact: parsed.data.discordContact || null } });
       await tx.ticketMessage.create({ data: { ticketId: created.id, authorId: null, guestAccessId: accessId, authorKind: "GUEST", content: parsed.data.message } });
       await tx.guestTicketRateLimit.create({ data: { fingerprintHash, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });

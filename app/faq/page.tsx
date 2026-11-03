@@ -5,13 +5,6 @@ import { prisma } from "@/lib/prisma";
 export const metadata = publicMetadata("Häufige Fragen", "Antworten zu Servereinstieg, Konten, Regelwerk und Kontaktmöglichkeiten bei DRP.", "/faq");
 export const dynamic = "force-dynamic";
 
-const fallbackItems = [
-  { id: "fallback-1", category: "Einstieg", question: "Wie komme ich auf den Server?", answer: "Tritt unserem Discord bei, verbinde Discord und Roblox und bestätige anschließend das aktuelle Regelwerk im Dashboard." },
-  { id: "fallback-2", category: "Support", question: "Wie erreiche ich den Support?", answer: "Erstelle im Dashboard ein Ticket als „Technischer Support“ oder „Kontaktaufnahme“." },
-  { id: "fallback-3", category: "Konto", question: "Wie aktualisiere ich meine Konten?", answer: "Unter Dashboard > Profil kannst du Discord- und Roblox-Daten aktualisieren oder das verbundene Konto wechseln." },
-  { id: "fallback-4", category: "Server", question: "Wo sehe ich den Serverstatus?", answer: "Die Statusseite zeigt ER:LC sowie verfügbare Discord-, Roblox- und Wartungsmeldungen." },
-];
-
 export default async function FaqPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string }> }) {
   const query = await searchParams;
   const q = (query.q || "").trim();
@@ -22,8 +15,8 @@ export default async function FaqPage({ searchParams }: { searchParams: Promise<
       ...(q ? { OR: [{ question: { contains: q, mode: "insensitive" } }, { answer: { contains: q, mode: "insensitive" } }] } : {}),
     },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
-  }).catch(() => fallbackItems.filter((item) => (!query.category || item.category === query.category) && (!q || `${item.question} ${item.answer}`.toLocaleLowerCase("de").includes(q.toLocaleLowerCase("de")))));
-  const allCategories = await prisma.faqItem.findMany({ where: { visible: true }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } }).catch(() => Array.from(new Set(fallbackItems.map((item) => item.category))).map((category) => ({ category })));
+  });
+  const allCategories = await prisma.faqItem.findMany({ where: { visible: true }, distinct: ["category"], select: { category: true }, orderBy: { category: "asc" } });
   const groups = Array.from(new Set(items.map((item) => item.category))).map((category) => ({ category, items: items.filter((item) => item.category === category) }));
 
   return (

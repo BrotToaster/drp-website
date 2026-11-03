@@ -1,6 +1,52 @@
 # Technische Prüfung der Entscheidungsvorschau
 
-Prüfstand: 2. November 2026. Diese Prüfung dokumentiert konkrete Änderungen und reproduzierbare Tests. Sie ist weder eine rechtliche Freigabe noch ein vollständiger Infrastruktur-Penetrationstest.
+Prüfstand: 3. November 2026. Diese Prüfung dokumentiert konkrete Änderungen und reproduzierbare Tests. Sie ist weder eine rechtliche Freigabe noch ein vollständiger Infrastruktur-Penetrationstest.
+
+## Ergänzende Prüfung vom 3. November
+
+Vor den Änderungen wurden eine neue Projektkopie einschließlich Git-Verlauf und Konfiguration sowie eine PostgreSQL-Sicherung unter den ignorierten `backups/` angelegt. Es gibt keine Schemaänderung, Bestandsdatenübernahme oder Rücksetzung der gehosteten Datenbank durch diesen Prüfauftrag.
+
+Der Quelltextdurchgang umfasst öffentliche Seiten, Anmeldung und Kontoverknüpfung, Mitglieder-, Team- und Verwaltungsaktionen sowie alle 17 API-Routen. Geprüft wurden Berechtigungsprüfungen vor Datenzugriffen, private Objektverweise, Server-/Browser-Grenzen, Eingabegrößen, Inhaltsausgabe, externe Abrufe und Fehlerbehandlung. Browserprüfungen verwenden synthetische Daten. Verdeckte Infrastruktur, echte Drittanbieter-Konten und unbekannte Angriffsketten sind damit nicht vollständig geprüft.
+
+| Schweregrad vor Behebung | Befund und Nachweis | Behebung |
+| --- | --- | --- |
+| Mittel | Mehrere öffentliche Bildfelder prüften nur den Medientyp. Regel-/News-Medien konnten ohne gemeinsame Prüfung der Sichtbarkeit übergeben werden. | Öffentliche Auswahl verlangt `PUBLIC`, Cloudinary-Auslieferung `upload` und für Titelbilder zusätzlich `IMAGE`. Gemeinsame Prüfung in Regeln, News, Kalender, Team und Homepage; öffentliche Ausgabe verwirft ungültige Altverweise. Tests weisen interne, authentifizierte und fehlende Medien zurück. In der Hostingvorschau sind Uploads zusätzlich abgeschaltet. |
+| Mittel | Die automatische physische Medienlöschung beim Entfernen von News/Regeln berücksichtigte nicht alle anderen Verwendungen. Ein weiterhin genutztes Bild konnte verschwinden. | Inhaltslöschung entfernt keine Anbieterdateien mehr. Zwei Regressionstests rufen die echten Löschaktionen mit gemeinsam verwendeten Medien auf. Unbenutzte Dateien können dadurch bestehen bleiben; eine vollständige referenzsichere Medienbereinigung ist ein eigener späterer Lebenszyklus. |
+| Mittel | Bot- und Medien-JSON wurde vor Schemavalidierung ohne eigene Lesegrenze eingelesen; ungültiges JSON konnte einen Serverfehler verursachen. | Streaming-Limit anhand tatsächlicher UTF-8-Bytes: 64 KiB für Medien, 2 MiB für Bot-Stapel. Ungültiges JSON ergibt 400, zu große Anfragen 413, falscher Inhaltstyp 415. Authentifizierung bleibt vorgeschaltet. Tests decken auch eine gelogene Inhaltslänge ab. |
+| Mittel | Gast- und Mitgliedstickets ermittelten die nächste Nummer getrennt über `MAX + 1`; gleichzeitige Erstellung konnte am Unique-Index scheitern. | Gemeinsame transaktionsgebundene PostgreSQL-Advisory-Sperre bis zum abgeschlossenen Insert. Zwölf konkurrierende Gast-/Mitglieds-Schreibvorgänge werden in der isolierten Regression-/CI-Datenbank geprüft und ausschließlich ihre eigenen Testtickets wieder entfernt. |
+| Niedrig | Die Regel-Speicheraktion übergab das erforderliche Sortierfeld nicht an die Validierung. | `order` wird validiert und gespeichert. |
+| Niedrig | Alte tägliche Terminserien verschwanden nach den ersten 400 Wiederholungen; wiederholte Zeitzonenformatierer verursachten vermeidbare Arbeit. | Berechnung startet nahe dem angefragten Zeitfenster; begrenzter Formatierer-Cache. Regressionstest für eine 2020 gestartete tägliche Serie im November 2026, zusätzlich bestehende Sommerzeit-/Serientests. |
+| Niedrig | Datenbankfehler konnten außerhalb der lokalen Demo als erfundene Regeln, News, Teamprofile, FAQ oder Kalenderkategorien erscheinen. Die Kalender-API gab bei Ausfall leere Termine zurück. | Fehler werden sichtbar weitergegeben; die API antwortet mit 503, `Retry-After` und `no-store`. Im Kalender gibt es eine sichtbare Fehlermeldung mit gezieltem Wiederholen. Ausschließlich die ausdrücklich lokale Demo behält ihre bisherigen Regel-/News-/Team-Beispiele. |
+
+### Fehleransichten und Bedienung
+
+Gemeinsame eigene Ansichten für 404 sowie lokale und globale React-Fehlergrenzen; die Passwortschranke hat eigene 401-/503-Antworten ohne Datenbank- oder JavaScript-Abhängigkeit. APIs behalten JSON und passende HTTP-Statuscodes. Interne Fehlermeldungen, Stacktraces und Anfrage-URLs werden nicht angezeigt. Eine optionale Supportkennung wird auf ein kurzes sicheres Zeichenformat begrenzt.
+
+Unter `/fehler` stehen Erklärungen für 400, 401, 403, 404, 405, 408, 409, 410, 413, 415, 422, 429, 500, 502, 503, 504 und Verbindungsverlust. Die Hilfeseiten sind ausdrücklich Erklärungen mit HTTP 200, keine künstlich ausgelösten Fehler. Tatsächliche nicht vorhandene Seiten liefern 404. Vorgeschaltete Fehlerseiten von Vercel, Browser-Netzwerkfehler vor dem ersten Seitenladen und Ausfälle des gesamten Hostings kann Anwendungscode nicht ersetzen.
+
+Bei Verbindungsverlust bleibt das geöffnete Formular stehen; es wird weder neu geladen noch automatisch abgesendet. Die Verbindungshilfe öffnet einen neuen Tab. Die Flaggen von Deutschland, Schweiz und Österreich illustrieren den deutschsprachigen Raum; der Begleittext schließt andere Nationalitäten ausdrücklich ein. Es werden keine neuen Länder- oder Standortdaten erfasst.
+
+### TikTok als öffentliche Quelle
+
+Das öffentliche Profil [@deutschland.rp.erlc](https://www.tiktok.com/@deutschland.rp.erlc) wurde am 3. November geöffnet. Profilname und Kanalzuordnung waren lesbar; Videoansicht und Videoliste wurden durch eine TikTok-Sicherheitsprüfung blockiert. Diese wurde nicht umgangen. Deshalb werden weder Videoanalysen noch übernommene Clipinhalte behauptet. Eingebaut wurde der offizielle Profilverweis bei den Community-Bildern und im Footer. Keine TikTok-Embeds, Tracker, kopierten Clips oder schnell veraltenden Follower-/Like-Zahlen.
+
+### Verbleibende Voraussetzungen
+
+Der erneute Abhängigkeits-Audit meldet weiterhin **0 kritisch, 0 hoch, 21 mittel**. Die unten beschriebene Bewertung bleibt bestehen. Es wurde kein vollständiger externer Penetrationstest durchgeführt. Für einen späteren echten Betrieb bleiben insbesondere Drittanbieter-Logins und Upload-Verifikation mit echten Konten, Betreiber-/Datenschutzkonfiguration, Providerlimits und die Missbrauchsgrenzen angemeldeter Schreibaktionen separat im tatsächlichen Hosting zu prüfen. Der Fünf-Minuten-Job läuft in der Hostingvorschau weiterhin nicht automatisch.
+
+### Abnahme des aktuellen Stands
+
+- ESLint, TypeScript, Produktionsbuild und alle **125 Unit-Tests** erfolgreich.
+- **80 reguläre Desktop-/Mobil-Browsertests**, dazu **8 getrennte Vorschaurollen-/Zugangstests** und **1 serieller Rücksetztest** erfolgreich. Der reguläre Lauf überspringt absichtlich die zehn separat gestarteten Vorschaufälle.
+- Eigene Fehleransichten, DACH-Hinweis und TikTok-Verweise in heller/dunkler Darstellung; keine TikTok-Netzwerkanfrage beim Besuch der Startseite. Formulareingaben über Offline-/Online-Wechsel erhalten; Kalender nach simuliertem 503 gezielt erneut geladen.
+- Absichtlich falsch zugeordnete lokale Vorschau-Datenbank: tatsächliche Fehlergrenze mit HTTP 500, Kalender-JSON mit 503 und vorgeschaltete Sperre mit 503; interne Details bleiben verborgen. Modell- und Raw-Abfragen werden vom Datenbankwächter abgewiesen.
+- Zwölf gleichzeitige Ticket-Anlagen ergeben zwölf eindeutige Nummern. Die erzeugten Testtickets werden anschließend entfernt.
+- Automatisches Vorladen der Links im privaten Seitenmenü abgeschaltet. Der gemessene Aufruf von `/admin/website` lädt noch vier übergeordnete Headerziele vor, aber keine weiteren Verwaltungsunterseiten. Dies ist ein Nachweis vermiedener Abrufe, keine pauschale Ladezeit- oder Lighthouse-Zusage.
+- Browser-Build gegen die konfigurierten lokalen und Hosting-Geheimnisse geprüft; keine der 13 beziehungsweise 26 geheimen Zeichenfolgen gefunden. Gitleaks findet im bisherigen Verlauf keine erkannten Geheimnisse. Konfigurationen und Prüfarbelege bleiben außerhalb von Git.
+
+Lokale Belege des aktuellen Laufs: `reliability-*-browser.log`, `reliability-faults.json`, `ticket-concurrency.json`, `portal-prefetch-after.json`, `reliability-*-secrets.log` sowie Bildschirmaufnahmen unter den ignorierten `logs/`. Diese Belege enthalten keine zu veröffentlichenden Community-Dumps.
+
+Die folgenden Abschnitte dokumentieren zusätzlich die bereits am 2. November abgeschlossene Vorschau-Abnahme; deren damalige Testzahlen sind ein historischer Stand.
 
 ## Ergebnis und Grenzen
 

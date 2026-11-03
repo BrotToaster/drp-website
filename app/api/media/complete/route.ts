@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/json-request";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
@@ -50,7 +51,9 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   }
-  const parsed = schema.safeParse(await request.json().catch(() => null));
+  const body = await readJsonRequest(request);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = schema.safeParse(body.value);
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Upload-Antwort." }, { status: 400 });
   const data = parsed.data;
   const internal = data.publicId.startsWith("drp-internal/");

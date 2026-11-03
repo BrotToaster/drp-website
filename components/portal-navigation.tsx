@@ -30,6 +30,6 @@ export function PortalNavigation({ groups, section, label, collapsed, onNavigate
     try { sessionStorage.setItem(storageKey, String(node.scrollTop)); } catch { /* Optional session preference. */ }
   };
   return <nav ref={navigation} className="portal-navigation" aria-label={`${label} Navigation`} onScroll={remember} data-lenis-prevent>
-    {groups.map(group => <div key={group.label} className="portal-nav-group"><p>{group.label}</p>{group.items.map(item => <ActiveNavLink key={item.href} href={item.href} exact={item.exact} scroll={false} onNavigate={() => { remember(); onNavigate(); }} className="portal-nav-link" activeClassName="active" aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined}><NavigationIcon href={item.href} />{!collapsed && <span>{item.label}</span>}</ActiveNavLink>)}</div>)}
+    {groups.map(group => <div key={group.label} className="portal-nav-group"><p>{group.label}</p>{group.items.map(item => <ActiveNavLink key={item.href} href={item.href} exact={item.exact} prefetch={false} scroll={false} onNavigate={() => { remember(); onNavigate(); }} className="portal-nav-link" activeClassName="active" aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined}><NavigationIcon href={item.href} />{!collapsed && <span>{item.label}</span>}</ActiveNavLink>)}</div>)}
   </nav>;
 }

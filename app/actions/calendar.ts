@@ -9,6 +9,7 @@ import { localDateTimeToUtc } from "@/lib/calendar";
 import { parseContentJson, plainTextFromContent } from "@/lib/content";
 import { canAccessCalendarCategory } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { publicMediaSelectionAllowed } from "@/lib/public-media";
 
 const value = (formData: FormData, key: string) => String(formData.get(key) || "").trim();
 
@@ -88,9 +89,7 @@ export async function saveCalendarEventAction(_previous: ActionResult, formData:
     const status: CalendarEventStatus = intent === "publish" && canPublish ? "PUBLISHED" : intent === "draft" ? "DRAFT" : "PENDING_REVIEW";
     const media = mediaData(formData);
     const coverImageId = value(formData, "coverImageId") || null;
-    const assetIds = Array.from(new Set([...media.ids, ...(coverImageId ? [coverImageId] : [])]));
-    const assets = await prisma.mediaAsset.findMany({ where: { id: { in: assetIds }, visibility: "PUBLIC" }, select: { id: true, kind: true } });
-    if (assets.length !== assetIds.length || (coverImageId && assets.find((asset) => asset.id === coverImageId)?.kind !== "IMAGE")) {
+    if (!(await publicMediaSelectionAllowed(prisma, media.ids, coverImageId || undefined))) {
       return { ok: false, code: "VALIDATION", message: "Mindestens eine Mediendatei ist ungültig." };
     }
 

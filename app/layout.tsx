@@ -19,6 +19,7 @@ import { appearanceBootScript } from "@/lib/appearance";
 import { SiteScroll } from "@/components/site-scroll";
 import { hostedPreviewEnabled } from "@/lib/preview-mode";
 import { PreviewNotice } from "@/components/preview-notice";
+import { ConnectionNotice } from "@/components/connection-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="de" data-hosted-preview={hostedPreviewEnabled() ? "true" : undefined} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: appearanceBootScript }} /></head>
       <body>
+        <ConnectionNotice />
         {hostedPreviewEnabled() && <PreviewNotice />}
         {process.env.NODE_ENV === "production" && <NativeActionForms />}
         <a className="skip-link" href="#main-content">Zum Inhalt springen</a>

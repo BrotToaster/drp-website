@@ -1,0 +1,18 @@
+.screen { min-height: 72svh; display: grid; align-items: center; padding: 64px 24px; color: var(--text,#28251f); background: var(--bg,#faf8f4); font-family: "Inter Variable",Inter,system-ui,sans-serif; }
+.inner { width: min(100%,1080px); margin: auto; }
+.brand { display: inline-flex; align-items: center; gap: 14px; color: inherit; font-size: 20px; font-weight: 700; text-decoration: none; }
+.brand span { color: var(--muted,#6e645a); font-size: 13px; font-weight: 500; }
+.layout { display: grid; grid-template-columns: .65fr 1fr; gap: 64px; align-items: start; padding-block: 80px; }
+.code { color: var(--accent-ink,#864a28); font-size: clamp(64px,9vw,120px); font-weight: 650; line-height: 1; letter-spacing: -.04em; }
+.layout h1 { font-size: clamp(32px,4vw,48px); font-weight: 650; line-height: 1.12; letter-spacing: -.035em; margin: 0 0 24px; }
+.message { max-width: 65ch; margin: 0; color: var(--muted,#6e645a); font-size: 17px; line-height: 1.65; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 32px; }
+.actions > a,.actions > button { display: inline-flex; align-items: center; min-height: 46px; padding: 12px 22px; border: 0; border-radius: 999px; background: var(--accent,#8b4f2c); color: var(--accent-contrast,#fff); text-decoration: none; font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
+.actions > :is(a,button):hover { background: var(--accent-hover,#754022); }
+.actions > .secondary { background: transparent; color: inherit; box-shadow: inset 0 0 0 1px var(--control-line,#877b70); }
+.actions > .textLink { background: transparent; padding-inline: 0; color: var(--accent-ink,#864a28); text-decoration: underline; text-underline-offset: 4px; }
+.actions > .textLink:hover,.actions > .secondary:hover { background: var(--surface-soft,#f2eee8); }
+.screen :is(a,button):focus-visible { outline: 3px solid var(--accent,#8b4f2c); outline-offset: 4px; }
+.note { margin-top: 24px; max-width: 65ch; font-size: 13px; line-height: 1.6; color: var(--muted,#6e645a); }
+@media (max-width: 767px) { .screen { padding: 40px 20px; } .layout { grid-template-columns: 1fr; gap: 28px; padding-block: 48px; } .brand { flex-wrap: wrap; } }
+:global(html[data-appearance="dark"]) .screen { --bg: #242320; --text: #f9f6f0; --muted: #c3b9ab; --accent: #d19f72; --accent-ink: #e3b58d; --accent-hover: #e3b58d; --accent-contrast: #242320; --control-line: #a49889; --surface-soft: #34312c; }

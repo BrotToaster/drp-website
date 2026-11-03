@@ -1,3 +1,4 @@
+import { isPublicImage } from "./public-media";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { siteConfig } from "@/lib/site";
@@ -39,7 +40,7 @@ export const getHomepageSettings = cache(async function getHomepageSettings() {
       code: card.code,
       name: card.title,
       copy: card.description,
-      imageUrl: card.image?.secureUrl,
+      imageUrl: isPublicImage(card.image) ? card.image!.secureUrl : null,
       targetUrl: card.targetUrl,
       linkLabel: card.linkLabel,
     })) : legacy;

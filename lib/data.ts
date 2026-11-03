@@ -1,3 +1,5 @@
+import { demoAccessEnabled } from "./local-mode";
+import { isPublicMedia, isPublicImage } from "./public-media";
 import { cache } from "react";
 import type { JSONContent } from "@tiptap/react";
 import { contentNodeSchema } from "@/lib/content";
@@ -44,7 +46,7 @@ async function loadPublishedRules(): Promise<RuleView[]> {
         order: rule.order,
         version: rule.version,
         updatedAt: rule.revisions[0].updatedAt,
-        media: rule.revisions[0].media.filter((item) => item.media.kind !== "DOCUMENT").map((item) => ({
+        media: rule.revisions[0].media.filter((item) => isPublicMedia(item.media)).map((item) => ({
           id: item.media.id,
           url: item.media.secureUrl,
           kind: item.media.kind as "IMAGE" | "AUDIO" | "VIDEO",
@@ -53,7 +55,8 @@ async function loadPublishedRules(): Promise<RuleView[]> {
         })),
       }));
   } catch {
-    return demoRules;
+    if (demoAccessEnabled()) return demoRules;
+    throw new Error("PUBLIC_CONTENT_UNAVAILABLE");
   }
 }
 
@@ -63,7 +66,7 @@ async function loadPublishedNews(): Promise<NewsView[]> {
       where: { published: true },
       orderBy: { publishedAt: "desc" },
       include: {
-        thumbnail: { select: { secureUrl: true } },
+        thumbnail: { select: { secureUrl: true, kind: true, visibility: true, deliveryType: true } },
         revisions: {
           where: { status: "PUBLISHED" },
           orderBy: { publishedAt: "desc" },
@@ -85,8 +88,8 @@ async function loadPublishedNews(): Promise<NewsView[]> {
         coverLabel: post.coverLabel,
         publishedAt: post.publishedAt || new Date(),
         editedAt: post.editedAt,
-        thumbnailUrl: post.thumbnail?.secureUrl || null,
-        media: post.revisions[0].media.filter((item) => item.media.kind !== "DOCUMENT").map((item) => ({
+        thumbnailUrl: isPublicImage(post.thumbnail) ? post.thumbnail!.secureUrl : null,
+        media: post.revisions[0].media.filter((item) => isPublicMedia(item.media)).map((item) => ({
           id: item.media.id,
           url: item.media.secureUrl,
           kind: item.media.kind as "IMAGE" | "AUDIO" | "VIDEO",
@@ -95,7 +98,8 @@ async function loadPublishedNews(): Promise<NewsView[]> {
         })),
       }));
   } catch {
-    return demoNews;
+    if (demoAccessEnabled()) return demoNews;
+    throw new Error("PUBLIC_CONTENT_UNAVAILABLE");
   }
 }
 
@@ -104,7 +108,7 @@ export async function getPublicTeam(): Promise<TeamView[]> {
     const profiles = await prisma.staffProfile.findMany({
       where: { visible: true },
       orderBy: { displayOrder: "asc" },
-      include: { user: { select: { id: true, name: true, avatar: true } }, image: { select: { secureUrl: true } } },
+      include: { user: { select: { id: true, name: true, avatar: true } }, image: { select: { secureUrl: true, kind: true, visibility: true, deliveryType: true } } },
     });
     return profiles.map((profile) => ({
       id: profile.id,
@@ -112,10 +116,11 @@ export async function getPublicTeam(): Promise<TeamView[]> {
       title: profile.title,
       department: profile.department,
       bio: profile.bio,
-      avatar: profile.image?.secureUrl || profile.user?.avatar || null,
+      avatar: (isPublicImage(profile.image) ? profile.image!.secureUrl : null) || profile.user?.avatar || null,
     }));
   } catch {
-    return demoTeam;
+    if (demoAccessEnabled()) return demoTeam;
+    throw new Error("PUBLIC_CONTENT_UNAVAILABLE");
   }
 }
 

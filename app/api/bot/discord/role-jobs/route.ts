@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/json-request";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isBotAuthorized } from "@/lib/bot-auth";
@@ -22,7 +23,9 @@ const acknowledgementSchema = z.object({ jobs: z.array(z.object({ id: z.string()
 
 export async function POST(request: Request) {
   if (!isBotAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = acknowledgementSchema.safeParse(await request.json().catch(() => null));
+  const body = await readJsonRequest(request, 2_097_152);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = acknowledgementSchema.safeParse(body.value);
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Bestätigung", details: parsed.error.flatten() }, { status: 400 });
   let updated = 0;
   for (const item of parsed.data.jobs) {
