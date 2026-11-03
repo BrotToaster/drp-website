@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormRuntimeProvider } from "@/components/form-runtime-context";
 import type { ActionResult } from "@/lib/action-result";
@@ -22,10 +22,26 @@ export function ReliableActionForm({
   const handledMutation = useRef<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [, startRefresh] = useTransition();
-  const normalizedAction = useCallback(async (previous: ActionResult, formData: FormData) => {
-    return ensureMutationId(await action(previous, formData));
-  }, [action]);
-  const [state, formAction, pending] = useActionState(normalizedAction, initialActionResult);
+  const [state, setState] = useState<ActionResult>(initialActionResult);
+  const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting.current) return;
+    const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
+    submitting.current = true;
+    setPending(true);
+    try {
+      // Keep completion independent of the router transition that revalidatePath
+      // starts. In production that transition can outlive the completed mutation.
+      setState(ensureMutationId(await action(state, formData)));
+    } catch {
+      setState(ensureMutationId({ ok: false, code: "SERVER", message: "Die Anfrage konnte nicht abgeschlossen werden. Prüfe den aktuellen Stand, bevor du erneut speicherst." }));
+    } finally {
+      submitting.current = false;
+      setPending(false);
+    }
+  }
   useEffect(() => {
     if (!state.message || !state.mutationId || handledMutation.current === state.mutationId) return;
     handledMutation.current = state.mutationId;
@@ -48,12 +64,12 @@ export function ReliableActionForm({
     return () => window.clearTimeout(hideToast);
   }, [state, resetOnSuccess, router, startRefresh]);
   return (
-    <form ref={formRef} action={formAction} className={className} data-reliable-action="true">
-      <FormRuntimeProvider>
+    <form ref={formRef} method="post" onSubmit={submit} className={className} data-reliable-action="true" aria-busy={pending}>
+      <FormRuntimeProvider submitting={pending}>
         <fieldset disabled={pending} className="contents">{children}</fieldset>
       </FormRuntimeProvider>
       {state.message && !state.ok && (
-        <p className={"rounded-xl px-4 py-3 text-sm " + (state.ok ? "bg-[#57c98c]/10 text-[#75d7a3]" : "bg-[#ef6f6c]/10 text-[#f28d8a]")} role={state.ok ? "status" : "alert"} aria-live="polite">
+        <p className={"rounded-xl px-4 py-3 text-sm " + (state.ok ? "bg-[#57c98c]/10 text-[var(--success-ink)]" : "bg-[#ef6f6c]/10 text-[var(--danger-ink)]")} role={state.ok ? "status" : "alert"} aria-live="polite">
           {state.message}
         </p>
       )}

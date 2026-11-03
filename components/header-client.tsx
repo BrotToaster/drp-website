@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/logo";
+import { AppearanceToggle } from "@/components/appearance-toggle";
 import { isNavigationActive, publicDiscoverNavigation, publicHelpNavigation, publicNavigation } from "@/lib/navigation";
 
 function DesktopMenu({
@@ -72,6 +73,7 @@ export function HeaderClient({ authenticated, discordUrl }: { authenticated: boo
         <DesktopMenu label="Hilfe" items={publicHelpNavigation} open={desktopMenu === "help"} active={publicHelpNavigation.some((item) => isNavigationActive(pathname, item.href))} onToggle={() => setDesktopMenu((current) => current === "help" ? null : "help")} onNavigate={closeMenus} />
       </nav>
       <div className="public-header-actions">
+        <AppearanceToggle />
         <Link className="button button-secondary compact-action" href={authenticated ? "/dashboard" : "/login"} onClick={closeMenus}>{authenticated ? "Portal" : "Anmelden"}</Link>
         <a className="button button-primary compact-action public-discord-action" href={discordUrl} target="_blank" rel="noreferrer" onClick={() => { setOpen(false); setDesktopMenu(null); }}>Discord</a>
         <button className="mobile-menu-button" type="button" aria-label={open ? "Navigation schließen" : "Navigation öffnen"} aria-expanded={open} onClick={() => { setDesktopMenu(null); setOpen((value) => !value); }}><span /><span /></button>

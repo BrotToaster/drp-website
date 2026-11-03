@@ -1,3 +1,4 @@
+import { hostedPreviewEnabled } from "./preview-mode";
 import type { Prisma, WeeklyRecommendation } from "@prisma/client";
 import { localDateTimeToUtc } from "@/lib/calendar";
 import { prisma } from "@/lib/prisma";
@@ -113,6 +114,7 @@ export async function rebuildWeeklyReport(reviewId: string) {
 }
 
 async function queueMappedRole(tx: Prisma.TransactionClient, input: { mappingKey: string; memberId: string; discordId: string; operation: "ADD" | "REMOVE"; dedupeSuffix: string }) {
+  if (hostedPreviewEnabled()) return false;
   const mapping = await tx.discordTeamRoleMapping.findUnique({ where: { key: input.mappingKey }, include: { discordRole: true } });
   if (!mapping?.enabled || !mapping.discordRoleId || !mapping.discordRole) return false;
   await tx.discordRoleJob.upsert({

@@ -1,3 +1,4 @@
+import { hostedPreviewEnabled } from "./preview-mode";
 import type { ServiceStatus, StatusSource } from "@prisma/client";
 import { getPublicServerStatus } from "@/lib/erlc";
 import { prisma } from "@/lib/prisma";
@@ -40,6 +41,7 @@ function mapIndicator(indicator: string): ServiceStatus {
 }
 
 async function platformStatus(url: string) {
+  if (hostedPreviewEnabled()) return null;
   try {
     const response = await fetch(url, {
       next: { revalidate: 60 },

@@ -1,3 +1,5 @@
+import { hostedPreviewEnabled } from "./preview-mode";
+import { assertOfficeArchiveLimits } from "./archive-limits";
 import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import mammoth from "mammoth";
@@ -11,13 +13,13 @@ export type WorkbookSnapshot = {
 };
 
 export const internalDocumentPresets = [
-  { key: "team-rulebook", title: "Team-Regelwerk", type: "GOOGLE_DOCS" as const, externalId: "1J064B-SoVn57wXbwg3207yDCRnt5EVHvxZE6Scp6IOU", url: "https://docs.google.com/document/d/1J064B-SoVn57wXbwg3207yDCRnt5EVHvxZE6Scp6IOU/edit?usp=sharing", splitProtocols: true },
-  { key: "user-list", title: "User Liste", type: "GOOGLE_SHEETS" as const, externalId: "1rM94jgLil1YHStuvbVY-YVreC_n_OCSh8YUE0dG7rq8", url: "https://docs.google.com/spreadsheets/d/1rM94jgLil1YHStuvbVY-YVreC_n_OCSh8YUE0dG7rq8/edit?usp=sharing" },
-  { key: "penalty-catalog", title: "Strafen Katalog", type: "UPLOAD_XLSX" as const, externalId: "1qlgUfdSYIjLkGEP1bKa1rnzwDUWo0ulATj4ZNXTf0jk", url: "https://docs.google.com/spreadsheets/d/1qlgUfdSYIjLkGEP1bKa1rnzwDUWo0ulATj4ZNXTf0jk/edit?usp=sharing" },
-  { key: "intermediate-exam", title: "Zwischen Prüfung", type: "GOOGLE_SHEETS" as const, externalId: "1AhegKqJ96xb0Kb-NCtiFh2Hl5AsIijhkpeWXzFK-6GI", url: "https://docs.google.com/spreadsheets/d/1AhegKqJ96xb0Kb-NCtiFh2Hl5AsIijhkpeWXzFK-6GI/edit?usp=sharing" },
-  { key: "junior-moderator-exam", title: "Junior Moderator Prüfung", type: "GOOGLE_DOCS" as const, externalId: "1DrLkOIasQZGYhB4p0-_ZnGP5IOu9Nj6z45EceEUEBDg", url: "https://docs.google.com/document/d/1DrLkOIasQZGYhB4p0-_ZnGP5IOu9Nj6z45EceEUEBDg/edit?usp=sharing" },
-  { key: "test-administrator-exam", title: "Test Administrator Prüfung", type: "UPLOAD_DOCX" as const, externalId: "1MFmDwd74avNFQX008w4MEXbP5EaRwkBtvu3FVXPqxnY", url: "https://docs.google.com/document/d/1MFmDwd74avNFQX008w4MEXbP5EaRwkBtvu3FVXPqxnY/edit?usp=sharing" },
-] as const;
+  { key: "team-rulebook", title: "Team-Regelwerk", type: "GOOGLE_DOCS" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_TEAM_RULEBOOK_ID || ""), url: "", splitProtocols: true },
+  { key: "user-list", title: "User Liste", type: "GOOGLE_SHEETS" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_USER_LIST_ID || ""), url: "" },
+  { key: "penalty-catalog", title: "Strafen Katalog", type: "UPLOAD_XLSX" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_PENALTY_CATALOG_ID || ""), url: "" },
+  { key: "intermediate-exam", title: "Zwischen Prüfung", type: "GOOGLE_SHEETS" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_INTERMEDIATE_EXAM_ID || ""), url: "" },
+  { key: "junior-moderator-exam", title: "Junior Moderator Prüfung", type: "GOOGLE_DOCS" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_JUNIOR_MODERATOR_EXAM_ID || ""), url: "" },
+  { key: "test-administrator-exam", title: "Test Administrator Prüfung", type: "UPLOAD_DOCX" as const, externalId: (hostedPreviewEnabled() ? "" : process.env.DRP_DOCUMENT_TEST_ADMINISTRATOR_EXAM_ID || ""), url: "" },
+].map(source => ({ ...source, url: source.externalId && (source.type === "GOOGLE_DOCS" || source.type === "GOOGLE_SHEETS") ? `https://docs.google.com/${source.type === "GOOGLE_DOCS" ? "document" : "spreadsheets"}/d/${source.externalId}/edit` : "" }));
 
 const protocolDefinitions = [
   { slug: "protokoll-discord-kick", title: "Protokoll zum Kick auf dem Discord-Server", aliases: ["Protokoll zum Kick", "Protokoll zum Kick auf dem Discord-Server"] },
@@ -130,6 +132,7 @@ export function parseDocumentHtml(html: string): JSONContent {
 }
 
 export async function parseDocx(buffer: Buffer) {
+  assertOfficeArchiveLimits(buffer);
   const converted = await mammoth.convertToHtml({ buffer });
   return parseDocumentHtml(converted.value);
 }
@@ -154,6 +157,7 @@ function spreadsheetCellText(cell: ExcelJS.Cell) {
 }
 
 export async function parseWorkbook(buffer: Buffer): Promise<WorkbookSnapshot> {
+  assertOfficeArchiveLimits(buffer);
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
   if (workbook.worksheets.length > 25) throw new Error("Die Arbeitsmappe enthält mehr als 25 Tabellenblätter.");

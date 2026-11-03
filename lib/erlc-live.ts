@@ -1,4 +1,6 @@
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
 import "server-only";
+import { demoAccessEnabled } from "@/lib/local-mode";
 import { demoServerDetails, type ErLcServerResponse } from "@/lib/erlc";
 import { getOfficialErlcMapUrl } from "@/lib/erlc-map";
 import { resolveErlcBackoff, toLivePlayer, type ErlcLiveMapSnapshot, type ErlcLivePlayer } from "@/lib/erlc-location";
@@ -12,7 +14,7 @@ let inFlight: Promise<ErlcLiveMapSnapshot> | null = null;
 let blockedUntil = 0;
 
 function demoAllowed() {
-  return process.env.NODE_ENV !== "production" && process.env.AUTH_DEMO_MODE !== "false";
+  return hostedPreviewEnabled() || demoAccessEnabled();
 }
 
 async function offlineSnapshot(retryAfterMs = DEFAULT_RETRY_MS): Promise<ErlcLiveMapSnapshot> {
@@ -28,7 +30,7 @@ async function offlineSnapshot(retryAfterMs = DEFAULT_RETRY_MS): Promise<ErlcLiv
 async function fetchSnapshot(): Promise<ErlcLiveMapSnapshot> {
   const mapUrlPromise = getOfficialErlcMapUrl({ postals: true });
   let details: ErLcServerResponse;
-  if (!process.env.ERLC_SERVER_KEY) {
+  if (!process.env.ERLC_SERVER_KEY || hostedPreviewEnabled()) {
     if (!demoAllowed()) return offlineSnapshot();
     details = demoServerDetails;
   } else {

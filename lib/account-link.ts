@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { authSigningSecret } from "@/lib/server-secret";
 
 export type AccountLinkProvider = "discord" | "roblox";
 export type AccountLinkIntent = "link" | "refresh" | "replace";
@@ -9,7 +10,7 @@ export type AccountLinkRequest = {
   intent: AccountLinkIntent;
 };
 
-const secret = () => process.env.AUTH_SECRET || "drp-local-demo-secret-change-in-production";
+const secret = authSigningSecret;
 
 export function createAccountLinkToken(
   userId: string,

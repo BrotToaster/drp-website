@@ -1,7 +1,8 @@
+import { readJsonRequest } from "@/lib/json-request";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { verifyCloudinaryUpload } from "@/lib/cloudinary";
+import { verifyCloudinaryUpload, verifiedCloudinaryResource } from "@/lib/cloudinary";
 import { getAuthorizationContext } from "@/lib/authz";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -50,7 +51,9 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   }
-  const parsed = schema.safeParse(await request.json().catch(() => null));
+  const body = await readJsonRequest(request);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = schema.safeParse(body.value);
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Upload-Antwort." }, { status: 400 });
   const data = parsed.data;
   const internal = data.publicId.startsWith("drp-internal/");
@@ -66,7 +69,7 @@ export async function POST(request: Request) {
   }
   const expectedHost = "res.cloudinary.com";
   const secureUrl = new URL(data.secureUrl);
-  if (secureUrl.hostname !== expectedHost || (internal ? !secureUrl.pathname.includes("/authenticated/") : !secureUrl.pathname.includes("/upload/"))) {
+  if (secureUrl.protocol !== "https:" || secureUrl.username || secureUrl.password || secureUrl.hostname !== expectedHost || !secureUrl.pathname.startsWith(`/${process.env.CLOUDINARY_CLOUD_NAME}/`) || (internal ? !secureUrl.pathname.includes("/authenticated/") : !secureUrl.pathname.includes("/upload/"))) {
     return NextResponse.json({ error: "Ungültige Medien-URL." }, { status: 400 });
   }
   const expectedKind = imageTypes.has(data.mimeType) ? "IMAGE" : audioTypes.has(data.mimeType) ? "AUDIO" : videoTypes.has(data.mimeType) ? "VIDEO" : internal && documentTypes.has(data.mimeType) ? "DOCUMENT" : null;
@@ -76,6 +79,13 @@ export async function POST(request: Request) {
   }
   const limit = data.kind === "IMAGE" ? 10_000_000 : data.kind === "AUDIO" || data.kind === "DOCUMENT" ? 25_000_000 : 100_000_000;
   if (data.bytes > limit) return NextResponse.json({ error: "Datei ist zu groß." }, { status: 400 });
+  try {
+    const actual = await verifiedCloudinaryResource(data.publicId, data.resourceType, internal ? "authenticated" : "upload");
+    if (actual.public_id !== data.publicId || actual.version !== data.version || actual.bytes !== data.bytes || actual.bytes > limit || actual.secure_url !== data.secureUrl || actual.resource_type !== data.resourceType || actual.type !== (internal ? "authenticated" : "upload")) return NextResponse.json({ error: "Upload-Angaben stimmen nicht mit dem Medienanbieter überein." }, { status: 400 });
+    const formats: Record<string, string[]> = { "image/jpeg": ["jpg", "jpeg"], "image/png": ["png"], "image/webp": ["webp"], "image/gif": ["gif"], "audio/mpeg": ["mp3"], "audio/wav": ["wav"], "audio/ogg": ["ogg"], "audio/mp4": ["mp4", "m4a"], "video/mp4": ["mp4"], "video/webm": ["webm"], "video/quicktime": ["mov"], "application/pdf": ["pdf"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"] };
+    const format = (actual.format || actual.public_id.split(".").at(-1) || "").toLowerCase();
+    if (!formats[data.mimeType]?.includes(format)) return NextResponse.json({ error: "Tatsächliches Dateiformat stimmt nicht mit dem angegebenen Typ überein." }, { status: 400 });
+  } catch { return NextResponse.json({ error: "Upload konnte nicht verifiziert werden." }, { status: 503 }); }
 
   const asset = await prisma.mediaAsset.upsert({
     where: { publicId: data.publicId },

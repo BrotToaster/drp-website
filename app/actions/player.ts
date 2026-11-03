@@ -1,5 +1,7 @@
 "use server";
 
+import { nextTicketNumber } from "@/lib/ticket-number";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureDbUser, getAuthorizationContext } from "@/lib/authz";
@@ -50,10 +52,10 @@ export async function createTicketAction(formData: FormData) {
   if (!category?.enabled) redirect("/dashboard/tickets?error=category");
 
   const ticket = await prisma.$transaction(async (tx) => {
-    const latest = await tx.ticket.aggregate({ _max: { number: true } });
+    const number = await nextTicketNumber(tx);
     return tx.ticket.create({
       data: {
-        number: (latest._max.number || 0) + 1,
+        number,
         subject: parsed.data.subject,
         categoryId: category.id,
         userId: user.id,

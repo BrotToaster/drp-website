@@ -8,10 +8,12 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getHomepageSettings } from "@/lib/site-settings";
 import { formatDateTime } from "@/lib/site";
+import { hostedPreviewEnabled } from "@/lib/preview-mode";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const preview = hostedPreviewEnabled();
   const user = await ensureDbUser();
   const authorization = await getAuthorizationContext(user.id);
   const isStaff = hasPermission(authorization, "staff.access");
@@ -75,47 +77,48 @@ export default async function DashboardPage() {
           ["Regelstatus", rulesComplete ? "Bestätigt" : "Offen", "/regelwerk"],
         ].map(([label, value, href]) => (
           <Link key={label} href={href} className="surface surface-interactive p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">{label}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--muted)]">{label}</p>
             <p className="mt-4 truncate text-lg font-semibold">{value}</p>
           </Link>
         ))}
       </div>
 
-      {isStaff && <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[.07] p-5"><div><span className="eyebrow">Staff-Lage</span><h2 className="mt-2 text-xl font-semibold">Was jetzt Aufmerksamkeit braucht</h2></div><Link className="button button-secondary" href="/staff">Live Operations öffnen</Link></div><div className="grid gap-px bg-white/[.07] sm:grid-cols-3"><Link href="/staff/tickets" className="bg-[#111317] p-5 hover:bg-[#171a1f]"><p className="text-xs text-[#777d81]">Offene Website-Tickets</p><p className="mt-3 text-3xl font-semibold">{staffTickets}</p></Link><a href={homepage.melonlyUrl} target="_blank" rel="noreferrer" className="bg-[#111317] p-5 hover:bg-[#171a1f]"><p className="text-xs text-[#777d81]">Melonly-Abgleich</p><p className="mt-3 text-sm font-semibold">{lastMelonly ? formatDateTime(lastMelonly.lastSyncedAt) : "Noch nie"}</p></a><Link href="/staff/aktivitaet" className="bg-[#111317] p-5 hover:bg-[#171a1f]"><p className="text-xs text-[#777d81]">Wochenprüfung</p><p className="mt-3 text-sm font-semibold">Teamaktivität prüfen →</p></Link></div></section>}
+      {isStaff && <section className="surface mt-6 overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] p-5"><div><h2 className="text-xl font-semibold">Was jetzt Aufmerksamkeit braucht</h2></div><Link className="button button-secondary" href="/staff">Live Operations öffnen</Link></div><div className="grid gap-px bg-[var(--surface-soft)] sm:grid-cols-3"><Link href="/staff/tickets" className="bg-[var(--surface-soft)] p-5 hover:bg-[var(--surface-soft)]"><p className="text-xs text-[var(--muted)]">Offene Website-Tickets</p><p className="mt-3 text-3xl font-semibold">{staffTickets}</p></Link><a href={homepage.melonlyUrl} target="_blank" rel="noreferrer" className="bg-[var(--surface-soft)] p-5 hover:bg-[var(--surface-soft)]"><p className="text-xs text-[var(--muted)]">Melonly-Abgleich</p><p className="mt-3 text-sm font-semibold">{lastMelonly ? formatDateTime(lastMelonly.lastSyncedAt) : "Noch nie"}</p></a><Link href="/staff/aktivitaet" className="bg-[var(--surface-soft)] p-5 hover:bg-[var(--surface-soft)]"><p className="text-xs text-[var(--muted)]">Wochenprüfung</p><p className="mt-3 text-sm font-semibold">Teamaktivität prüfen →</p></Link></div></section>}
 
-      {isAdmin && <section className="surface mt-6 flex flex-wrap items-center justify-between gap-5 p-5"><div><span className="eyebrow">Administration</span><h2 className="mt-2 font-semibold">Integrations- und Synchronisationszustand</h2><p className="mt-2 text-xs text-[#777d81]">Letzter Discord-Mitgliederabgleich: {lastDiscordSync ? formatDateTime(lastDiscordSync.createdAt) : "noch nie"}</p></div><Link className="button button-secondary" href="/admin/integrationen">Integrationen prüfen</Link></section>}
+      {isAdmin && <section className="surface mt-6 flex flex-wrap items-center justify-between gap-5 p-5"><div><h2 className="font-semibold">Integrations- und Synchronisationszustand</h2><p className="mt-2 text-xs text-[var(--muted)]">Letzter Discord-Mitgliederabgleich: {lastDiscordSync ? formatDateTime(lastDiscordSync.createdAt) : "noch nie"}</p></div><Link className="button button-secondary" href="/admin/integrationen">Integrationen prüfen</Link></section>}
 
       <div className={"mt-6 grid gap-5 " + (setupComplete ? "" : "xl:grid-cols-[1.15fr_.85fr]")}>
         {!setupComplete && (
           <section className="surface p-6 md:p-7">
-            <span className="badge badge-gold">Nächster Schritt</span>
-            <h2 className="mt-4 text-xl font-semibold">Dein DRP-Profil vervollständigen</h2>
-            <div className="mt-7 grid gap-3">
-              {[
+            
+            <h2 className="text-xl font-semibold">{preview ? "Dein Testkonto" : "Dein DRP-Profil vervollständigen"}</h2>
+            {preview && <p className="mt-3 text-sm text-[var(--muted)]">Discord und Roblox bleiben in der Entscheidungsvorschau unverbunden. Du kannst dein Profil, Tickets und die Regelbestätigung mit diesem Testkonto ausprobieren.</p>}
+            <div className="portal-task-list mt-4">
+              {!preview && [
                 ["Discord-Konto", discordLinked, "/dashboard/profil"],
                 ["Roblox-Konto", robloxLinked, "/dashboard/profil"],
               ].map(([label, complete, href]) => (
-                <div key={String(label)} className="flex items-center justify-between rounded-xl border border-white/[0.07] p-4">
+                <div key={String(label)} className="portal-task-row">
                   <div>
                     <p className="text-sm font-semibold">{label}</p>
-                    <p className="mt-1 text-xs text-[#777d81]">{complete ? "Verbunden" : "Noch nicht verbunden"}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{complete ? "Verbunden" : "Noch nicht verbunden"}</p>
                   </div>
                   {complete ? (
-                    <span className="text-xs font-bold text-[#75d7a3]">Erledigt</span>
+                    <span className="text-xs font-bold text-[var(--success-ink)]">Erledigt</span>
                   ) : (
-                    <Link href={String(href)} className="text-xs font-bold text-[#efc76e]">Verbinden</Link>
+                    <Link href={String(href)} className="text-xs font-bold text-[var(--accent-ink)]">Verbinden</Link>
                   )}
                 </div>
               ))}
-              <div className="flex items-center justify-between rounded-xl border border-white/[0.07] p-4">
+              <div className="portal-task-row">
                 <div>
                   <p className="text-sm font-semibold">Regelwerk</p>
-                  <p className="mt-1 text-xs text-[#777d81]">
+                  <p className="mt-1 text-xs text-[var(--muted)]">
                     {rulesComplete ? "Alle aktuellen Regeln bestätigt" : "Bestätigung erforderlich"}
                   </p>
                 </div>
                 {rulesComplete ? (
-                  <span className="text-xs font-bold text-[#75d7a3]">Erledigt</span>
+                  <span className="text-xs font-bold text-[var(--success-ink)]">Erledigt</span>
                 ) : (
                   <form action={acceptRulesAction}>
                     <SubmitButton variant="secondary" pendingText="Wird bestätigt …">Bestätigen</SubmitButton>
@@ -127,13 +130,13 @@ export default async function DashboardPage() {
         )}
 
         <section className="surface p-6 md:p-7">
-          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">Schnellzugriff</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--muted)]">Schnellzugriff</p>
           <div className="mt-5 grid gap-2">
-            <Link href="/dashboard/tickets" className="rounded-xl bg-white/[0.035] p-4 text-sm font-semibold transition hover:bg-white/[0.06]">Support-Ticket erstellen <span className="float-right text-[#efc76e]">→</span></Link>
-            <Link href="/regelwerk" className="rounded-xl bg-white/[0.035] p-4 text-sm font-semibold transition hover:bg-white/[0.06]">Regelwerk öffnen <span className="float-right text-[#efc76e]">→</span></Link>
+            <Link href="/dashboard/tickets" className="rounded-xl bg-[var(--surface-soft)] p-4 text-sm font-semibold transition hover:bg-[var(--surface-soft)]">Support-Ticket erstellen <span className="float-right text-[var(--accent-ink)]">→</span></Link>
+            <Link href="/regelwerk" className="rounded-xl bg-[var(--surface-soft)] p-4 text-sm font-semibold transition hover:bg-[var(--surface-soft)]">Regelwerk öffnen <span className="float-right text-[var(--accent-ink)]">→</span></Link>
           </div>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }} className="mt-6">
-            <button className="text-xs font-semibold text-[#777d81] hover:text-white" type="submit">Abmelden</button>
+            <button className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]" type="submit">Abmelden</button>
           </form>
         </section>
       </div>

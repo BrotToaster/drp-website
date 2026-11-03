@@ -24,9 +24,9 @@ export function StatusBadge({ status }: { status: string }) {
       className={
         "badge " +
         (positive
-          ? "!border-[#57c98c]/25 !bg-[#57c98c]/10 !text-[#75d7a3]"
+          ? "!border-[#57c98c]/25 !bg-[#57c98c]/10 !text-[var(--success-ink)]"
           : negative
-            ? "!border-[#ef6f6c]/25 !bg-[#ef6f6c]/10 !text-[#f28d8a]"
+            ? "!border-[#ef6f6c]/25 !bg-[#ef6f6c]/10 !text-[var(--danger-ink)]"
             : "badge-gold")
       }
     >

@@ -1,123 +1,51 @@
-# DRP – Deutschland Roleplay Portal
+# DRP – Deutschland Roleplay
 
-Responsives Next.js-Portal für den ER:LC-Server mit öffentlichem Regelwerk und News, Discord-/Roblox-OAuth, Spieler-Dashboard, Tickets sowie rollenbasiertem Staff- und Admin-Panel.
+Communityportal für ER:LC mit Regeln, News, Kalender, Konten, Tickets und geschützten Team- und Verwaltungsbereichen. Die Oberfläche unterstützt helle und dunkle Darstellung, eine überspringbare Einführung und optionale Lichtspiele.
 
-## Technik
+## Entscheidungsvorschau
 
-- Next.js 15 App Router, TypeScript und Tailwind CSS
-- Auth.js mit Discord und Roblox OAuth
-- PostgreSQL über Railway Postgres und Prisma 6
-- TipTap-JSON für versionierte Regeln und News
-- signierte Cloudinary-Direktuploads
-- FullCalendar mit Tages-, Wochen-, Monats-, Jahres- und Agendaansicht
-- kombinierbare Datenbankrollen mit Discord-Synchronisierung
-- strukturierter Weekly Insider aus Discord-Rängen und Melonly-Zeiten
-- geschützte, versionierte interne Dokumente mit Rollenfreigaben sowie Google-Docs-, Google-Sheets-, DOCX- und XLSX-Import
+Diese Version bereitet eine getrennte, passwortgeschützte Vorschau mit künstlichen Konten und Daten vor. Sie ist keine Freigabe für echten Communitybetrieb. Zielplattform: Vercel Hobby und eine neue Neon-PostgreSQL-Datenbank. Ein statischer Dateihoster beziehungsweise GitHub Pages reicht für die serverseitigen Funktionen nicht aus.
 
-## Lokal starten
+Die vollständige Anleitung steht in [HOSTING_PREVIEW.md](./HOSTING_PREVIEW.md). Sicherheitsbefunde, Prüfungen und Grenzen stehen in [SECURITY_REVIEW.md](./SECURITY_REVIEW.md). Verwendete Gestaltungskomponenten und lokale Hilfsprogramme sind unter [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) aufgeführt.
 
-Voraussetzung ist Node.js 22.13 oder neuer aus der 22er-LTS-Reihe.
+Für die nächste Umstrukturierung enthält die [Funktionsübersicht](./FUNKTIONSUEBERSICHT.md) 70 nummerierte Funktionen mit Beschreibung, Zugangsbedingungen und Abgrenzung zu externen Diensten. Die sechs Hauptfraktionsvorstellungen sind unter **Administration → Startseite & Links → Hauptfraktionen** pflegbar.
 
-~~~powershell
-npm install
-Copy-Item .env.example .env
-npx netlify login
-npx netlify link
-npm run dev:netlify
-~~~
+## Entwicklung und Prüfung
 
-In einem zweiten Terminal werden die Migrationen einmalig angewendet:
+Voraussetzungen: Node.js 22 ab 22.13, npm und PostgreSQL 17. Zugangsdaten gehören in ignorierte Umgebungsdateien oder in die Secret-Verwaltung des Hosters. Die Datei [.env.example](./.env.example) enthält ausschließlich Vorlagen.
 
-~~~powershell
-npm run db:setup
-npm run db:seed
-~~~
+```sh
+npm ci
+npm run db:generate
+npm run db:deploy
+npm run lint
+npm run typecheck
+npm test
+npm run check:dependencies
+npm run build
+npm run check:secrets
+```
 
-Danach ist die Website unter http://localhost:3000 erreichbar. Docker wird nicht benötigt. npm run dev funktioniert nur, wenn DATABASE_URL auf eine erreichbare PostgreSQL-Datenbank zeigt.
+Migrationen werden ausdrücklich ausgeführt, nicht bei jedem Build. Bei bereits vorhandenen Tabellen ohne passende Migrationshistorie bricht die Einrichtung ab. Ein Seed ist ein gesonderter Import von Beispieldaten und gehört nicht zum normalen Start einer bestehenden Installation.
 
-## Railway
+## Windows lokal
 
-Die aktuelle Anleitung steht in [DEPLOY_RAILWAY.md](./DEPLOY_RAILWAY.md). Die bisherige Netlify-Anleitung bleibt für einen einfachen Rückwechsel erhalten. Vor dem ersten Produktionsdeploy müssen alle Werte aus `.env.example` als Umgebungsvariablen hinterlegt werden. Geheimnisse gehören niemals in Git.
+Die vorhandenen Startdateien bleiben erhalten: `Start-DRP.bat` für die optimierte PC-Vorschau, `Start-DRP-Handy.bat` für das Heimnetz, `Start-DRP-Entwicklung.bat` für Bearbeitung und `Stop-DRP.bat` zum Beenden. Sie benötigen die bereits eingerichteten projektlokalen Laufzeiten und die lokale Konfiguration. Daten und Laufzeiten werden nicht mit dem Repository verteilt.
 
-Migrationen liegen unter `netlify/database/migrations`. Portal v7 ergänzt:
+Die lokale Entscheidungsvorschau verwendet eine eigene Datenbank und standardmäßig Port 3108. Sie wird über `node scripts/preview-server.mjs runtime/preview.env` gestartet; siehe Hosting-Anleitung. Ein öffentlicher passwortloser Owner-Demozugang ist nicht vorgesehen.
 
-- frei löschbare Rollen mit geschützter Owner-Rolle und konfigurierbarer Standardrolle,
-- dokumentbezogene Rollenfreigaben und versionierte Importmetadaten,
-- geschützte Tabellenkopien aus Google Sheets oder XLSX,
-- das aktualisierte öffentliche Regelwerk mit 117 Regeln aus sieben Bereichen.
+`Backup-DRP.bat` beziehungsweise `npm run db:backup` sichert die lokale Bestandsdatenbank im Verzeichnis `backups`. Eine Sicherung wird zunächst in eine neue Datenbank wiederhergestellt:
 
-## Discord-Bot
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 -Action Restore -BackupFile backups/drp_DATUM.dump -RestoreName drp_restore_pruefung
+```
 
-Alle Bot-Endpunkte erwarten:
+Den tatsächlichen Dateinamen einsetzen. Der Wiederherstellungsbefehl überschreibt keine bestehende Datenbank und stellt die laufende Website nicht automatisch um. Sicherungen können personenbezogene Daten enthalten und gehören ausschließlich in eine private, geschützte Ablage.
 
-~~~text
-Authorization: Bearer <BOT_INGEST_TOKEN>
-Content-Type: application/json
-~~~
+## Betreiber und Datenschutz
 
-Vorhandene generische Endpunkte:
+Die frühere Impressumsadresse führt zum Verantwortlichen-Abschnitt der Datenschutzerklärung. Tatsächliche Betreiber- und Kontaktangaben bleiben erforderlich, soweit die einschlägigen Informationspflichten sie verlangen. Musterangaben sind als solche gekennzeichnet. Ein Betreiber in der Schweiz ist keine pauschale rechtliche Ausnahme für jedes Angebot.
 
-- POST /api/bot/data – aktuelle Werte
-- POST /api/bot/events – chronologische Ereignisse
+## Frühere Hostingvarianten
 
-Neue Rollensynchronisierung:
-
-- POST /api/bot/discord/roles
-- POST /api/bot/discord/members
-
-Beispiel für Rollen:
-
-~~~json
-{
-  "guildId": "123456789",
-  "externalId": "roles-sync-2026-07-17T12:00:00Z",
-  "roles": [
-    {
-      "id": "987654321",
-      "name": "Supporter",
-      "color": "#57c98c",
-      "position": 20,
-      "managed": false
-    }
-  ]
-}
-~~~
-
-Beispiel für Mitglieder:
-
-~~~json
-{
-  "guildId": "123456789",
-  "externalId": "members-sync-2026-07-17T12:00:00Z-1",
-  "members": [
-    {
-      "id": "111222333",
-      "username": "beispiel",
-      "displayName": "Beispiel",
-      "avatarUrl": null,
-      "roleIds": ["987654321"]
-    }
-  ]
-}
-~~~
-
-externalId macht Wiederholungen idempotent. Der Bot sollte auf Guild Member Update reagieren und zusätzlich regelmäßig einen Vollabgleich senden. Dafür muss im Discord Developer Portal der privilegierte GUILD_MEMBERS-Intent aktiviert sein.
-
-## Regelwerk-Fixture
-
-Das importierte Regelwerk liegt in data/rules.fixture.json. Neu erzeugen:
-
-~~~powershell
-node scripts/import-rule-source.mjs
-node scripts/generate-rule-migration.mjs
-~~~
-
-Ohne Quellordner lädt der Importer die sieben öffentlichen Google-Sites-Seiten direkt. Alternativ kann als erstes Argument ein Ordner mit `main.html`, `discord.html`, `event.html`, `faction.html`, `main-factions.html`, `legal-factions.html` und `illegal-factions.html` angegeben werden. Die Fixture enthält eine SHA-256-Prüfsumme, die durch Tests abgesichert wird.
-
-## Qualität
-
-~~~powershell
-npm run check
-~~~
-
-Der Check führt ESLint, TypeScript, alle Unit-Tests, Prisma Generate und den vollständigen Next.js-Produktionsbuild nacheinander aus.
+`DEPLOY_RAILWAY.md` und `DEPLOY_NETLIFY.md` dokumentieren frühere Varianten. Für diese Entscheidungsvorschau gilt ausschließlich die neue Anleitung; eine Umstellung auf echten Betrieb braucht eine eigene Prüfung.

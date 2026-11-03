@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { RuleView } from "@/lib/demo-data";
 
-export function RuleRotator({ rules }: { rules: RuleView[] }) {
+export function RuleRotator({ rules }: { rules: Pick<RuleView, "id" | "slug" | "category" | "title">[] }) {
   const [start, setStart] = useState(0);
   const [pageSize, setPageSize] = useState(6);
   const [paused, setPaused] = useState(false);
@@ -64,16 +64,16 @@ export function RuleRotator({ rules }: { rules: RuleView[] }) {
             href={"/regelwerk#" + rule.slug}
             className="surface surface-interactive min-h-36 p-5"
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#777d81]">
+            <p className="line-clamp-3 font-semibold leading-6">{rule.title}</p>
+            <p className="mt-3 text-xs text-[var(--muted)]">
               {rule.category}
             </p>
-            <p className="mt-3 line-clamp-3 font-semibold leading-6">{rule.title}</p>
-            <span className="mt-5 inline-block text-xs font-bold text-[#efc76e]">Lesen →</span>
+            <span className="mt-5 inline-block text-xs font-bold text-[var(--accent-ink)]">Lesen →</span>
           </Link>
         ))}
       </div>
       <div className="mt-5 flex items-center justify-between">
-        <p className="text-xs text-[#70767a]">
+        <p className="text-xs text-[var(--muted)]">
           {Math.min(start + 1, rules.length)}–{Math.min(start + visible.length, rules.length)} von {rules.length}
         </p>
         <div className="flex gap-2">

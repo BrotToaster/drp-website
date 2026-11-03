@@ -1,3 +1,4 @@
+import { assertExternalServicesAllowed } from "./preview-mode";
 import { prisma } from "@/lib/prisma";
 
 type UnknownRecord = Record<string, unknown>;
@@ -30,6 +31,7 @@ async function melonlyRequest(path: string, page = 1): Promise<Page<UnknownRecor
   const url = new URL(`${BASE_URL.replace(/\/$/, "")}${path}`);
   url.searchParams.set("page", String(page));
   url.searchParams.set("limit", "100");
+  assertExternalServicesAllowed();
   const response = await fetch(url, { headers: { authorization: `Bearer ${token}`, accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
   if (!response.ok) {
     const retry = response.headers.get("retry-after");

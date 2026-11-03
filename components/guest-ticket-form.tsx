@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { createGuestTicketAction } from "@/app/actions/guest-tickets";
 import { ensureMutationId, type ActionResult } from "@/lib/action-result";
 
@@ -32,6 +33,6 @@ export function GuestTicketForm() {
       <label className="guest-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
     </div>
     {!state.ok && <p className="form-error" role="alert">{state.message}</p>}
-    <div className="guest-form-footer"><GuestSubmit /><p>Mit dem Absenden erhältst du einen privaten Zugriffslink. Es ist keine E-Mail-Adresse erforderlich.</p></div>
+    <div className="guest-form-footer"><GuestSubmit /><p>Mit dem Absenden erhältst du einen privaten Zugriffslink. Es ist keine E-Mail-Adresse erforderlich. Wie wir deine Angaben verwenden, steht im <Link className="underline underline-offset-4" href="/datenschutz">Datenschutz</Link>.</p></div>
   </form>;
 }

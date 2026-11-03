@@ -1,5 +1,7 @@
 "use server";
 
+import { nextTicketNumber } from "@/lib/ticket-number";
+
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -21,11 +23,11 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
   });
   if (!parsed.success) return actionFailure("Bitte prüfe Name, Kategorie, Betreff und Nachricht.", "VALIDATION");
   const requestHeaders = await headers();
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || "local";
+  const ip = process.env.TRUST_PROXY_CLIENT_IP === "true"
+    ? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || "local"
+    : "local";
   const fingerprintHash = guestFingerprint(ip);
   await prisma.guestTicketRateLimit.deleteMany({ where: { expiresAt: { lt: new Date() } } });
-  const recent = await prisma.guestTicketRateLimit.count({ where: { fingerprintHash, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } } });
-  if (recent >= 3) return actionFailure("Zu viele neue Tickets. Bitte versuche es später erneut oder nutze Discord.", "CONFLICT");
   const category = await prisma.ticketCategory.findFirst({ where: { key: parsed.data.category, enabled: true } });
   if (!category) return actionFailure("Diese Ticketkategorie ist derzeit nicht verfügbar.", "VALIDATION");
   const token = createGuestTicketToken();
@@ -33,8 +35,11 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
   const ticketId = randomUUID();
   try {
     const ticket = await prisma.$transaction(async (tx) => {
-      const latest = await tx.ticket.aggregate({ _max: { number: true } });
-      const created = await tx.ticket.create({ data: { id: ticketId, number: (latest._max.number || 0) + 1, subject: parsed.data.subject, categoryId: category.id, userId: null } });
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${fingerprintHash}))::text`;
+      const recent = await tx.guestTicketRateLimit.count({ where: { fingerprintHash, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } } });
+      if (recent >= 3) throw new Error("GUEST_RATE_LIMIT");
+      const number = await nextTicketNumber(tx);
+      const created = await tx.ticket.create({ data: { id: ticketId, number, subject: parsed.data.subject, categoryId: category.id, userId: null } });
       await tx.guestTicketAccess.create({ data: { id: accessId, ticketId: created.id, tokenHash: hashGuestTicketToken(token), displayName: parsed.data.displayName, discordContact: parsed.data.discordContact || null } });
       await tx.ticketMessage.create({ data: { ticketId: created.id, authorId: null, guestAccessId: accessId, authorKind: "GUEST", content: parsed.data.message } });
       await tx.guestTicketRateLimit.create({ data: { fingerprintHash, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
@@ -46,7 +51,8 @@ export async function createGuestTicketAction(_previous: ActionResult<{ accessUr
       data: { accessUrl: `/kontakt/zugang?token=${encodeURIComponent(token)}` },
       refresh: "none",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "GUEST_RATE_LIMIT") return actionFailure("Zu viele neue Tickets. Bitte versuche es später erneut oder nutze Discord.", "CONFLICT");
     return actionFailure("Das Ticket konnte nicht erstellt werden. Bitte nutze alternativ den Discord-Support.");
   }
 }

@@ -1,7 +1,8 @@
+import { hostedPreviewEnabled } from "./preview-mode";
 import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 
-export const cloudinaryConfigured = Boolean(
+export const cloudinaryConfigured = !hostedPreviewEnabled() && Boolean(
   process.env.CLOUDINARY_CLOUD_NAME &&
     process.env.CLOUDINARY_API_KEY &&
     process.env.CLOUDINARY_API_SECRET,
@@ -42,6 +43,14 @@ export function verifyCloudinaryUpload(publicId: string, version: number, suppli
   const left = Buffer.from(expected);
   const right = Buffer.from(supplied);
   return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export async function verifiedCloudinaryResource(publicId: string, resourceType: string, deliveryType: string) {
+  if (!cloudinaryConfigured) throw new Error("Cloudinary ist nicht verfügbar.");
+  const url = `https://api.cloudinary.com/v1_1/${encodeURIComponent(process.env.CLOUDINARY_CLOUD_NAME!)}/resources/${resourceType}/${deliveryType}/${encodeURIComponent(publicId)}`;
+  const response = await fetch(url, { headers: { authorization: "Basic " + Buffer.from(`${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`).toString("base64") }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000) });
+  if (!response.ok) throw new Error("Upload konnte nicht beim Medienanbieter verifiziert werden.");
+  return await response.json() as { public_id: string; version: number; bytes: number; secure_url: string; resource_type: string; type: string; format?: string };
 }
 
 export async function deleteCloudinaryAsset(publicId: string, resourceType: string) {

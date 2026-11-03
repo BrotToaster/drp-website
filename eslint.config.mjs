@@ -11,7 +11,12 @@ const config = [
   {
     ignores: [
       ".next/**",
+      ".next-dev/**",
       "node_modules/**",
+      "runtime/**",
+      "database/**",
+      "backups/**",
+      "logs/**",
       "playwright-report/**",
       "next-env.d.ts",
     ],

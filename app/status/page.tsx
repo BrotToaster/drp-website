@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/metadata";
 import { PageIntro } from "@/components/ui";
 import { getPortalStatus, statusColor, statusLabels } from "@/lib/service-status";
 import { formatDateTime } from "@/lib/site";
 import { RelativeTime } from "@/components/relative-time";
 
-export const metadata: Metadata = { title: "Status" };
+export const metadata = publicMetadata("Serverstatus", "Aktueller Status des DRP-Servers und Hinweise zu Störungen oder Wartungen.", "/status");
 export const dynamic = "force-dynamic";
 
 export default async function StatusPage() {
@@ -22,10 +22,10 @@ export default async function StatusPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {status.services.map((service) => (
               <article key={service.id} className="surface p-6">
-                <div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.12em] text-[#777d81]">{service.source === "MANUAL" ? "DRP Dienst" : "Automatisch"}</p><h2 className="mt-2 text-xl font-semibold">{service.name}</h2></div><span className={"rounded-full border px-3 py-1 text-xs font-semibold " + statusColor(service.status)}>{statusLabels[service.status]}</span></div>
-                {service.description && <p className="mt-4 text-sm leading-6 text-[#8d9397]">{service.description}</p>}
-                {service.message && <p className="mt-4 rounded-xl bg-white/[0.035] p-3 text-sm text-[#b4b8bb]">{service.message}</p>}
-                <p className="mt-5 text-xs text-[#656b70]"><RelativeTime value={service.checkedAt} prefix="Geprüft" /></p>
+                <div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.12em] text-[var(--muted)]">{service.source === "MANUAL" ? "DRP Dienst" : "Automatisch"}</p><h2 className="mt-2 text-xl font-semibold">{service.name}</h2></div><span className={"rounded-full border px-3 py-1 text-xs font-semibold " + statusColor(service.status)}>{statusLabels[service.status]}</span></div>
+                {service.description && <p className="mt-4 text-sm leading-6 text-[var(--muted)]">{service.description}</p>}
+                {service.message && <p className="mt-4 rounded-xl bg-[var(--surface-soft)] p-3 text-sm text-[var(--muted)]">{service.message}</p>}
+                <p className="mt-5 text-xs text-[var(--muted)]"><RelativeTime value={service.checkedAt} prefix="Geprüft" /></p>
               </article>
             ))}
           </div>
@@ -35,11 +35,11 @@ export default async function StatusPage() {
               {status.updates.map((update) => (
                 <article key={update.id} className="surface flex flex-wrap gap-4 p-5">
                   <span className={"h-fit rounded-full border px-3 py-1 text-xs font-semibold " + statusColor(update.status)}>{statusLabels[update.status]}</span>
-                  <div className="min-w-[220px] flex-1"><h3 className="font-semibold">{update.serviceName}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#8d9397]">{update.message || "Status wurde aktualisiert."}</p></div>
-                  <time className="text-xs text-[#686e72]">{formatDateTime(update.createdAt)}</time>
+                  <div className="min-w-[220px] flex-1"><h3 className="font-semibold">{update.serviceName}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--muted)]">{update.message || "Status wurde aktualisiert."}</p></div>
+                  <time className="text-xs text-[var(--muted)]">{formatDateTime(update.createdAt)}</time>
                 </article>
               ))}
-              {!status.updates.length && <p className="surface p-7 text-sm text-[#777d81]">Aktuell gibt es keine öffentlichen Statusmeldungen.</p>}
+              {!status.updates.length && <p className="surface p-7 text-sm text-[var(--muted)]">Aktuell gibt es keine öffentlichen Statusmeldungen.</p>}
             </div>
           </section>
         </div>

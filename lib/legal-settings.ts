@@ -1,15 +1,21 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { hostedPreviewEnabled, previewOperatorReady } from "./preview-mode";
 
 export const legalSettingsSchema = z.object({
   imprintEnabled: z.boolean().default(true),
   privacyPublished: z.boolean().default(false),
-  operatorName: z.string().default(""),
-  addressLine: z.string().default(""),
-  postalCode: z.string().default(""),
-  city: z.string().default(""),
-  country: z.string().default("Schweiz"),
-  contactEmail: z.string().default(""),
+  operatorName: z.string().trim().max(200).default(""),
+  addressLine: z.string().trim().max(200).default(""),
+  postalCode: z.string().trim().max(20).default(""),
+  city: z.string().trim().max(100).default(""),
+  country: z.string().trim().min(2).max(100).default("Schweiz"),
+  contactEmail: z.union([z.literal(""), z.string().trim().email().max(254)]).default(""),
+  sampleDetails: z.boolean().default(false),
+  representative: z.string().trim().max(200).default(""),
+  registerCourt: z.string().trim().max(200).default(""),
+  registerNumber: z.string().trim().max(100).default(""),
+  vatId: z.string().trim().max(40).default(""),
   donations: z.enum(["NONE", "VOLUNTARY"]).default("NONE"),
   lastReviewedAt: z.string().nullable().default(null),
   noAgeVerificationAcknowledged: z.boolean().default(true),
@@ -33,6 +39,11 @@ const legalDefaults: LegalSettings = {
   city: "",
   country: "Schweiz",
   contactEmail: "",
+  sampleDetails: false,
+  representative: "",
+  registerCourt: "",
+  registerNumber: "",
+  vatId: "",
   donations: "NONE",
   lastReviewedAt: null,
   noAgeVerificationAcknowledged: true,
@@ -47,7 +58,11 @@ const retentionDefaults: RetentionSettings = {
 export async function getLegalSettings() {
   try {
     const setting = await prisma.siteSetting.findUnique({ where: { key: "legal.settings" } });
-    return legalSettingsSchema.parse(setting?.value || legalDefaults);
+    const stored = legalSettingsSchema.parse(setting?.value || legalDefaults);
+    // Real responsible-party details are hosting configuration, not editable
+    // sample content that a tester can overwrite while trying admin forms.
+    if (hostedPreviewEnabled() && previewOperatorReady()) return { ...stored, operatorName: process.env.PREVIEW_OPERATOR_NAME!.trim(), contactEmail: process.env.PREVIEW_OPERATOR_EMAIL!.trim(), country: "Schweiz", addressLine: process.env.PREVIEW_OPERATOR_ADDRESS || "", city: process.env.PREVIEW_OPERATOR_CITY || "", postalCode: process.env.PREVIEW_OPERATOR_POSTAL_CODE || "", sampleDetails: false };
+    return stored;
   } catch {
     return legalDefaults;
   }
@@ -65,9 +80,15 @@ export async function getRetentionSettings() {
 export function legalDetailsComplete(settings: LegalSettings) {
   return Boolean(
     settings.operatorName.trim() &&
-    settings.addressLine.trim() &&
-    settings.postalCode.trim() &&
-    settings.city.trim() &&
-    settings.contactEmail.trim(),
+    settings.country.trim() &&
+    z.string().email().safeParse(settings.contactEmail).success,
   );
+}
+
+export function hasSampleLegalDetails(settings: LegalSettings) {
+  return settings.sampleDetails || /mustermann|musterfrau|musterstra[ßs]e|musterstadt|example\.(?:com|org|net|de)|\.invalid\b/i.test([settings.operatorName, settings.addressLine, settings.city, settings.contactEmail].join(" "));
+}
+
+export function legalPublicationReady(settings: LegalSettings) {
+  return legalDetailsComplete(settings) && !hasSampleLegalDetails(settings) && settings.privacyPublished;
 }

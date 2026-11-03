@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/json-request";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,7 +17,9 @@ export async function POST(request: Request) {
   if (!isBotAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const parsed = eventSchema.safeParse(await request.json());
+  const body = await readJsonRequest(request, 2_097_152);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = eventSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid payload", details: parsed.error.flatten() },

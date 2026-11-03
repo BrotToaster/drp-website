@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { actionFailure, actionSuccess, type ActionResult } from "@/lib/action-result";
 import { plainTextFromContent, parseContentJson } from "@/lib/content";
 import { requirePermission } from "@/lib/authz";
-import { deleteCloudinaryAsset } from "@/lib/cloudinary";
+import { publicMediaSelectionAllowed } from "@/lib/public-media";
 import { canAccessTicketCategory, canTransitionTicket } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { newsEditorSchema, ruleEditorSchema, ticketStatusSchema } from "@/lib/validators";
@@ -58,25 +58,8 @@ function auditData(
   return { actorId, action, entityType, entityId, metadata };
 }
 
-type AssetCandidate = { id: string; publicId: string; resourceType: string };
-
-async function cleanupUnusedMedia(candidates: AssetCandidate[]) {
-  const unique = Array.from(new Map(candidates.map((asset) => [asset.id, asset])).values());
-  for (const asset of unique) {
-    const [rules, news, thumbnails] = await Promise.all([
-      prisma.ruleRevisionMedia.count({ where: { mediaId: asset.id } }),
-      prisma.newsRevisionMedia.count({ where: { mediaId: asset.id } }),
-      prisma.newsPost.count({ where: { thumbnailId: asset.id } }),
-    ]);
-    if (rules + news + thumbnails !== 0) continue;
-    try {
-      await deleteCloudinaryAsset(asset.publicId, asset.resourceType);
-      await prisma.mediaAsset.delete({ where: { id: asset.id } });
-    } catch {
-      // Keep the database record so a failed Cloudinary deletion can be retried safely.
-    }
-  }
-}
+// Media outlives individual content: other pages and documents may still use it.
+// Physical provider deletion requires a separate reference-safe lifecycle.
 
 export async function updateTicketStatusAction(
   _previous: ActionResult,
@@ -218,6 +201,7 @@ export async function saveRuleAction(formData: FormData) {
     ruleId: value(formData, "ruleId") || undefined,
     title: value(formData, "title"),
     category: value(formData, "category"),
+    order: Number(value(formData, "order") || "0"),
     content,
     mediaIds: mediaIds(formData),
   });
@@ -226,6 +210,7 @@ export async function saveRuleAction(formData: FormData) {
   const permission = parsed.data.ruleId ? "rules.edit" : "rules.create";
   const { user: actor } = await requirePermission(permission);
   if (intent === "publish") await requirePermission("rules.publish");
+  if (!(await publicMediaSelectionAllowed(prisma, parsed.data.mediaIds))) redirect("/staff/regelwerk?error=media");
 
   const saved = await prisma.$transaction(async (tx) => {
     const existing = parsed.data.ruleId
@@ -313,22 +298,10 @@ export async function withdrawRuleAction(formData: FormData) {
 export async function deleteRuleAction(formData: FormData) {
   const { user: actor } = await requirePermission("rules.delete");
   const ruleId = value(formData, "ruleId");
-  const rule = await prisma.rule.findUnique({
-    where: { id: ruleId },
-    select: {
-      revisions: {
-        select: {
-          media: { select: { media: { select: { id: true, publicId: true, resourceType: true } } } },
-        },
-      },
-    },
-  });
-  const assets = rule?.revisions.flatMap((revision) => revision.media.map((item) => item.media)) || [];
   await prisma.$transaction(async (tx) => {
     await tx.rule.delete({ where: { id: ruleId } });
     await tx.auditLog.create({ data: auditData(actor.id, "RULE_DELETED", "Rule", ruleId) });
   });
-  await cleanupUnusedMedia(assets);
   revalidatePath("/regelwerk");
   revalidatePath("/");
   revalidatePath("/staff/regelwerk");
@@ -350,6 +323,7 @@ export async function saveNewsAction(formData: FormData) {
   const permission = parsed.data.postId ? "news.edit" : "news.create";
   const { user: actor } = await requirePermission(permission);
   if (intent === "publish") await requirePermission("news.publish");
+  if (!(await publicMediaSelectionAllowed(prisma, parsed.data.mediaIds, parsed.data.thumbnailId))) redirect("/staff/news?error=media");
 
   const post = await prisma.$transaction(async (tx) => {
     const existing = parsed.data.postId
@@ -443,26 +417,10 @@ export async function withdrawNewsAction(formData: FormData) {
 export async function deleteNewsAction(formData: FormData) {
   const { user: actor } = await requirePermission("news.delete");
   const postId = value(formData, "postId");
-  const post = await prisma.newsPost.findUnique({
-    where: { id: postId },
-    select: {
-      thumbnail: { select: { id: true, publicId: true, resourceType: true } },
-      revisions: {
-        select: {
-          media: { select: { media: { select: { id: true, publicId: true, resourceType: true } } } },
-        },
-      },
-    },
-  });
-  const assets = [
-    ...(post?.thumbnail ? [post.thumbnail] : []),
-    ...(post?.revisions.flatMap((revision) => revision.media.map((item) => item.media)) || []),
-  ];
   await prisma.$transaction(async (tx) => {
     await tx.newsPost.delete({ where: { id: postId } });
     await tx.auditLog.create({ data: auditData(actor.id, "NEWS_DELETED", "NewsPost", postId) });
   });
-  await cleanupUnusedMedia(assets);
   revalidatePath("/news");
   revalidatePath("/");
   revalidatePath("/staff/news");

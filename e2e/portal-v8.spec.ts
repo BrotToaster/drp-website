@@ -6,7 +6,7 @@ async function loginDemo(page: Page) {
   if (!(await demo.isVisible().catch(() => false))) return false;
   await demo.click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 }).catch(() => undefined);
-  return page.locator(".portal-app").isVisible().catch(() => false);
+  return page.locator(".portal-app").waitFor({ state: "visible", timeout: 15_000 }).then(() => true).catch(() => false);
 }
 
 test("öffentliche Navigation bleibt bei allen Zielbreiten bedienbar", async ({ page }) => {
@@ -35,16 +35,19 @@ test("öffentliche Navigation bleibt bei allen Zielbreiten bedienbar", async ({ 
   }
 });
 
-test("Regelwerksuche öffnet weich und bleibt per Tastatur bedienbar", async ({ page }) => {
+test("Regelwerksuche bleibt sichtbar und lässt sich per Tastatur zurücksetzen", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("drp-intro-v1", "skipped"));
   await page.goto("/regelwerk");
-  const search = page.getByRole("textbox", { name: "Regelwerk durchsuchen" });
-  await expect(search).toBeHidden();
-  await page.getByRole("button", { name: "Regelwerk durchsuchen" }).click();
+  const search = page.getByRole("searchbox", { name: "Regelwerk durchsuchen" });
   await expect(search).toBeVisible();
-  await expect(search).toBeFocused();
   await search.fill("Verkehr");
+  await expect(page.getByRole("heading", { name: "Suchergebnisse", exact: true })).toBeVisible();
   await search.press("Escape");
-  await expect(search).toBeHidden();
+  await expect(search).toBeVisible();
+  await expect(search).toHaveValue("");
+  await page.getByRole("heading", { level: 1, name: "Regelwerk." }).click();
+  await page.keyboard.press("/");
+  await expect(search).toBeFocused();
 });
 
 test("Kontaktseite trennt Gast-, Discord- und Ownership-Ablauf", async ({ page }) => {
@@ -80,7 +83,7 @@ test("Portal filtert Navigation, öffnet Command Palette und zeigt Live-Betrieb"
   await page.keyboard.press("Control+k");
   await expect(page.getByRole("dialog", { name: "DRP durchsuchen" })).toBeVisible();
   await page.getByLabel("Suchbegriff").fill("Ownership");
-  await expect(page.getByText("Website-Tickets").first()).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "DRP durchsuchen" }).getByText("Website-Tickets").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goto("/dashboard/tickets?category=OWNERSHIP");
   await expect(page.getByLabel("Kategorie")).toHaveValue("OWNERSHIP");
@@ -101,21 +104,40 @@ test("Admin-Formular beendet den Speichern-Status zuverlässig", async ({ page }
   test.skip(!ready, "Lokale Testdatenbank oder Demo-Login ist nicht verfügbar.");
   await page.goto("/admin/website");
   const save = page.getByRole("button", { name: "Links speichern" });
+  const invitation = page.getByRole("textbox", { name: "Discord-Einladung", exact: true });
+  const original = await invitation.inputValue();
+  await invitation.fill("http://example.com");
   await save.click();
-  await expect(page.getByText("Öffentliche Links wurden gespeichert.")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Bitte gib für alle Ziele gültige HTTPS-Links ein." }).first()).toBeVisible();
   await expect(save).toBeEnabled();
-  await expect(save).toHaveText("Links speichern");
+  await invitation.fill(original);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await save.click();
+    await expect(page.getByText("Öffentliche Links wurden gespeichert.")).toBeVisible();
+    await expect(save).toBeEnabled();
+    await expect(save).toHaveText("Links speichern");
+  }
 });
 
 test("Ticketstatus bleibt nach erfolgreicher Änderung nicht im Pending-Zustand", async ({ page }) => {
   const ready = await loginDemo(page);
   test.skip(!ready, "Lokale Testdatenbank oder Demo-Login ist nicht verfügbar.");
+  const subject = `Automatischer Status-Prueflauf ${Date.now()}`;
+  await page.goto("/dashboard/tickets");
+  await page.getByLabel("Betreff").fill(subject);
+  await page.getByLabel("Beschreibung").fill("Automatisierte Prüfung der Statusrückmeldung im lokalen Portal.");
+  await page.getByRole("button", { name: "Ticket absenden", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/tickets\/[^?]+\?created=1$/);
   await page.goto("/staff/tickets");
-  const setButton = page.getByRole("button", { name: "Setzen" }).first();
-  test.skip(!(await setButton.isVisible().catch(() => false)), "Kein änderbares lokales Testticket vorhanden.");
+  const row = page.getByRole("row").filter({ hasText: subject });
+  const setButton = row.getByRole("button", { name: "Setzen" });
+  await row.getByRole("combobox").selectOption("IN_PROGRESS");
   await setButton.click();
   await expect(page.getByText("Status wurde aktualisiert.").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Setzen" }).first()).toBeEnabled();
+  await expect(setButton).toBeEnabled();
+  await expect(row.locator('option[value="WAITING_USER"]')).toHaveCount(1);
+  await page.reload();
+  await expect(row.getByText("In Bearbeitung", { exact: true })).toBeVisible();
 });
 
 test("öffentliche Suche liefert keine geschützten Ergebnistypen", async ({ request }) => {

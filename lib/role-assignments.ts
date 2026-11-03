@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { demoAccessEnabled } from "./local-mode";
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
 
@@ -9,7 +10,7 @@ export async function ensureBaseRoleAssignments(
   discordId?: string | null,
 ) {
   const shouldOwn =
-    userId === "demo-owner" ||
+    (userId === "demo-owner" && demoAccessEnabled()) ||
     Boolean(discordId && discordId === process.env.OWNER_DISCORD_ID);
   const defaultSetting = await db.siteSetting.findUnique({ where: { key: "auth.defaultAccessRole" } });
   const configuredDefaultId = defaultSetting?.value && typeof defaultSetting.value === "object" && !Array.isArray(defaultSetting.value)

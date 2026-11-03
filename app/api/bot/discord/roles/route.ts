@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/json-request";
 import { NextResponse } from "next/server";
 import { isBotAuthorized } from "@/lib/bot-auth";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,9 @@ export async function POST(request: Request) {
   if (!isBotAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const parsed = discordRoleSyncSchema.safeParse(await request.json().catch(() => null));
+  const body = await readJsonRequest(request, 2_097_152);
+  if (!body.ok) return NextResponse.json({ error: body.message }, { status: body.status });
+  const parsed = discordRoleSyncSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültige Rollendaten", details: parsed.error.flatten() }, { status: 400 });
   }

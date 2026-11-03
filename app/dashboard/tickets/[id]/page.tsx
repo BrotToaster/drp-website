@@ -60,15 +60,15 @@ export default async function TicketDetailPage({
   return (
     <PortalShell authorization={authorization} title={"Ticket #" + ticket.number} description={ticket.subject} section={section}>
       {query.created && (
-        <p role="status" className="mb-5 rounded-xl border border-[#57c98c]/25 bg-[#57c98c]/10 p-4 text-sm text-[#75d7a3]">
+        <p role="status" className="mb-5 rounded-xl border border-[#57c98c]/25 bg-[#57c98c]/10 p-4 text-sm text-[var(--success-ink)]">
           Dein Ticket wurde erfolgreich gesendet.
         </p>
       )}
       <div className="grid gap-5 xl:grid-cols-[1fr_260px]">
         <section className="surface overflow-hidden">
-          <div className="border-b border-white/[0.07] p-6">
+          <div className="border-b border-[var(--line)] p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><p className="text-xs text-[#777d81]">{ticket.category.label}</p><h2 className="mt-1 font-semibold">{ticket.subject}</h2></div>
+              <div><p className="text-xs text-[var(--muted)]">{ticket.category.label}</p><h2 className="mt-1 font-semibold">{ticket.subject}</h2></div>
               <StatusBadge status={ticket.status} />
             </div>
           </div>
@@ -77,22 +77,22 @@ export default async function TicketDetailPage({
               const staffAuthor = Boolean(message.author?.roleAssignments.some((assignment) => assignment.role.permissions.some((item) => item.permission.key === "staff.access")));
               const authorName = message.author?.name || message.guestAccess?.displayName || (message.authorKind === "SYSTEM" ? "DRP-System" : "Gast");
               return (
-                <article key={message.id} className={"max-w-[85%] rounded-2xl border p-4 " + (staffAuthor ? "border-[#d6aa4c]/20 bg-[#d6aa4c]/[0.06]" : "border-white/[0.07] bg-white/[0.025]")}>
+                <article key={message.id} className={"max-w-[85%] rounded-2xl border p-4 " + (staffAuthor ? "border-[var(--accent-line)] bg-[var(--accent)]/[0.06]" : "border-[var(--line)] bg-[var(--surface-soft)]")}>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <strong>{authorName}</strong>
-                    {staffAuthor && <span className="text-[#efc76e]">Staff</span>}
-                    {message.authorKind === "GUEST" && <span className="text-[#9ca3af]">Gast</span>}
-                    {message.authorKind === "SYSTEM" && <span className="text-[#9ca3af]">System</span>}
-                    {message.internal && <span className="text-[#f28d8a]">Intern</span>}
-                    <time className="text-[#686e72]">{formatDateTime(message.createdAt)}</time>
+                    {staffAuthor && <span className="text-[var(--accent-ink)]">Staff</span>}
+                    {message.authorKind === "GUEST" && <span className="text-[var(--muted)]">Gast</span>}
+                    {message.authorKind === "SYSTEM" && <span className="text-[var(--muted)]">System</span>}
+                    {message.internal && <span className="text-[var(--danger-ink)]">Intern</span>}
+                    <time className="text-[var(--muted)]">{formatDateTime(message.createdAt)}</time>
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#afb3b5]">{message.content}</p>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{message.content}</p>
                 </article>
               );
             })}
           </div>
           {!["CLOSED", "RESOLVED"].includes(ticket.status) && (
-            <form action={replyTicketAction} className="border-t border-white/[0.07] p-5 md:p-6">
+            <form action={replyTicketAction} className="border-t border-[var(--line)] p-5 md:p-6">
               <input type="hidden" name="ticketId" value={ticket.id} />
               <label className="field-label">Antwort
                 <textarea className="field" name="content" required minLength={2} maxLength={4000} placeholder="Deine Nachricht …" />
@@ -102,15 +102,15 @@ export default async function TicketDetailPage({
           )}
         </section>
         <aside className="surface h-fit p-5 text-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#777d81]">Details</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-[var(--muted)]">Details</p>
           <dl className="mt-5 grid gap-4">
-            <div><dt className="text-xs text-[#686e72]">Erstellt von</dt><dd className="mt-1 font-semibold">{ticket.user?.name || ticket.guestAccess?.displayName || "Gast"}</dd></div>
-            {ticket.guestAccess?.discordContact && <div><dt className="text-xs text-[#686e72]">Discord-Kontakt</dt><dd className="mt-1 font-semibold">{ticket.guestAccess.discordContact}</dd></div>}
-            <div><dt className="text-xs text-[#686e72]">Bearbeitung</dt><dd className="mt-1 font-semibold">{ticket.assignee?.name || "Noch nicht zugewiesen"}</dd></div>
-            <div><dt className="text-xs text-[#686e72]">Zuletzt aktualisiert</dt><dd className="mt-1 font-semibold">{formatDateTime(ticket.updatedAt)}</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Erstellt von</dt><dd className="mt-1 font-semibold">{ticket.user?.name || ticket.guestAccess?.displayName || "Gast"}</dd></div>
+            {ticket.guestAccess?.discordContact && <div><dt className="text-xs text-[var(--muted)]">Discord-Kontakt</dt><dd className="mt-1 font-semibold">{ticket.guestAccess.discordContact}</dd></div>}
+            <div><dt className="text-xs text-[var(--muted)]">Bearbeitung</dt><dd className="mt-1 font-semibold">{ticket.assignee?.name || "Noch nicht zugewiesen"}</dd></div>
+            <div><dt className="text-xs text-[var(--muted)]">Zuletzt aktualisiert</dt><dd className="mt-1 font-semibold">{formatDateTime(ticket.updatedAt)}</dd></div>
           </dl>
           {isOwner && !ticket.ownerHiddenAt && ["RESOLVED", "CLOSED"].includes(ticket.status) && (
-            <div className="mt-6 grid gap-2 border-t border-white/[0.07] pt-5">
+            <div className="mt-6 grid gap-2 border-t border-[var(--line)] pt-5">
               {ticket.ownerArchivedAt ? (
                 <>
                   <form action={restoreTicketAction}>

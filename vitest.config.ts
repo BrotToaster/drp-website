@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    maxWorkers: 2,
     include: ["tests/**/*.test.ts"],
     exclude: ["e2e/**", "node_modules/**", ".next/**"],
   },

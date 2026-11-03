@@ -9,13 +9,13 @@ export const emptyContent: JSONContent = {
 export const contentNodeSchema: z.ZodType<JSONContent> = z.lazy(() =>
   z.object({
     type: z.string().optional(),
-    attrs: z.record(z.any()).optional(),
+    attrs: z.record(z.string(), z.unknown()).optional(),
     marks: z
       .array(
         z
           .object({
             type: z.string(),
-            attrs: z.record(z.any()).optional(),
+            attrs: z.record(z.string(), z.unknown()).optional(),
           })
           .passthrough(),
       )
@@ -27,19 +27,25 @@ export const contentNodeSchema: z.ZodType<JSONContent> = z.lazy(() =>
 
 export function parseContentJson(value: string): JSONContent | null {
   try {
-    const parsed = contentNodeSchema.safeParse(JSON.parse(value));
+    if (value.length > 1_000_000) return null;
+    const input = JSON.parse(value);
+    const pending = [{ node: input, depth: 0 }];
+    let count = 0;
+    while (pending.length) {
+      const { node, depth } = pending.pop()!;
+      if (++count > 20000 || depth > 40) return null;
+      if (node && Array.isArray(node.content)) {
+        for (const child of node.content) pending.push({ node: child, depth: depth + 1 });
+      }
+    }
+    const parsed = contentNodeSchema.safeParse(input);
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
 }
 
-export function plainTextFromContent(content: JSONContent | null | undefined): string {
-  if (!content) return "";
-  const own = typeof content.text === "string" ? content.text : "";
-  const children = content.content?.map(plainTextFromContent).filter(Boolean) || [];
-  return [own, ...children].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-}
+export { plainTextFromContent } from "@/lib/content-text";
 
 export function paragraphContent(text: string): JSONContent {
   return {

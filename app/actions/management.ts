@@ -1,5 +1,7 @@
 "use server";
 
+import { isPublicImage } from "@/lib/public-media";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -104,8 +106,8 @@ export async function saveTeamMemberAction(formData: FormData) {
     if (linked) redirect("/admin/team?error=user-linked");
   }
   if (imageId) {
-    const image = await prisma.mediaAsset.findUnique({ where: { id: imageId }, select: { kind: true } });
-    if (image?.kind !== "IMAGE") redirect("/admin/team?error=image");
+    const image = await prisma.mediaAsset.findUnique({ where: { id: imageId }, select: { kind: true, visibility: true, deliveryType: true } });
+    if (!isPublicImage(image)) redirect("/admin/team?error=image");
   }
   const saved = await prisma.$transaction(async (tx) => {
     const profile = id

@@ -65,7 +65,7 @@ export default async function AuditPage({
       section="staff"
     >
       <section className="surface overflow-hidden">
-        <form className="grid gap-3 border-b border-white/[0.07] p-5 md:grid-cols-3 xl:grid-cols-6">
+        <form className="grid gap-3 border-b border-[var(--line)] p-5 md:grid-cols-3 xl:grid-cols-6">
           <input className="field xl:col-span-2" name="q" defaultValue={query.q || ""} placeholder="Volltextsuche" />
           <select className="field" name="action" defaultValue={query.action || ""}>
             <option value="">Alle Aktionen</option>
@@ -87,19 +87,19 @@ export default async function AuditPage({
           {logs.map((log) => (
             <details key={log.id} className="group p-5">
               <summary className="grid cursor-pointer list-none gap-2 md:grid-cols-[180px_1fr_1fr_1fr]">
-                <time className="text-xs text-[#858b90]">{formatDateTime(log.createdAt)}</time>
+                <time className="text-xs text-[var(--muted)]">{formatDateTime(log.createdAt)}</time>
                 <strong className="text-sm">{log.actor?.name || "System"}</strong>
                 <span className="text-sm">{log.action}</span>
-                <span className="truncate text-sm text-[#777d81]">{log.entityType}{log.entityId ? " · " + log.entityId : ""}</span>
+                <span className="truncate text-sm text-[var(--muted)]">{log.entityType}{log.entityId ? " · " + log.entityId : ""}</span>
               </summary>
-              <pre className="mt-4 max-h-72 overflow-auto rounded-xl bg-black/25 p-4 text-xs text-[#aeb2b5]">
+              <pre className="mt-4 max-h-72 overflow-auto rounded-xl bg-[var(--surface-soft)] p-4 text-xs text-[var(--muted)]">
                 {log.metadata ? JSON.stringify(log.metadata, null, 2) : "Keine Metadaten"}
               </pre>
             </details>
           ))}
-          {!logs.length && <p className="p-12 text-center text-sm text-[#777d81]">Keine passenden Audit-Einträge.</p>}
+          {!logs.length && <p className="p-12 text-center text-sm text-[var(--muted)]">Keine passenden Audit-Einträge.</p>}
         </div>
-        <div className="flex items-center justify-between border-t border-white/[0.07] p-5 text-sm">
+        <div className="flex items-center justify-between border-t border-[var(--line)] p-5 text-sm">
           <span>{total} Einträge</span>
           <div className="flex gap-2">
             {page > 1 && <Link className="button button-secondary !min-h-9" href={{ query: { ...query, page: page - 1 } }}>Zurück</Link>}

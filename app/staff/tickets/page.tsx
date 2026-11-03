@@ -54,18 +54,18 @@ export default async function StaffTicketsPage({
       description="Tickets sind nach Kategorie gruppiert. Nur geschlossene Tickets können endgültig gelöscht werden."
       section="staff"
     >
-      {query.deleted && <p role="status" className="mb-5 rounded-xl bg-[#57c98c]/10 p-3 text-sm text-[#75d7a3]">Das geschlossene Ticket wurde endgültig gelöscht.</p>}
-      {query.error && <p role="alert" className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-3 text-sm text-[#f28d8a]">Das Ticket konnte nicht gelöscht werden. Prüfe Status und Berechtigung.</p>}
+      {query.deleted && <p role="status" className="mb-5 rounded-xl bg-[#57c98c]/10 p-3 text-sm text-[var(--success-ink)]">Das geschlossene Ticket wurde endgültig gelöscht.</p>}
+      {query.error && <p role="alert" className="mb-5 rounded-xl bg-[#ef6f6c]/10 p-3 text-sm text-[var(--danger-ink)]">Das Ticket konnte nicht gelöscht werden. Prüfe Status und Berechtigung.</p>}
       <div className="grid gap-5">
         {categories.map((category) => {
           const canStatus = canAccessTicketCategory(authorization, category.id, "canStatus");
           const canDelete = canAccessTicketCategory(authorization, category.id, "canDelete");
           return (
             <section className="surface overflow-hidden" key={category.id}>
-              <div className="flex items-center justify-between border-b border-white/[0.07] p-6">
+              <div className="flex items-center justify-between border-b border-[var(--line)] p-6">
                 <div>
                   <h2 className="text-xl font-semibold">{category.label}</h2>
-                  <p className="mt-1 text-sm text-[#777d81]">{category.description}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{category.description}</p>
                 </div>
                 <span className="badge badge-gold">{category.tickets.length} Tickets</span>
               </div>
@@ -75,14 +75,14 @@ export default async function StaffTicketsPage({
                   <tbody>
                     {category.tickets.map((ticket) => (
                       <tr key={ticket.id}>
-                        <td><Link href={"/dashboard/tickets/" + ticket.id} className="font-semibold hover:text-[#efc76e]">#{ticket.number} · {ticket.subject}</Link></td>
+                        <td><Link href={"/dashboard/tickets/" + ticket.id} className="font-semibold hover:text-[var(--accent-ink)]">#{ticket.number} · {ticket.subject}</Link></td>
                         <td>
                           {ticket.user?.robloxDisplayName || ticket.user?.robloxName || ticket.user?.discordDisplayName || ticket.user?.name || ticket.guestAccess?.displayName || "Gast"}
                           {!ticket.userId && <span className="ml-2 badge">Gast</span>}
                         </td>
                         <td><StatusBadge status={ticket.status} /></td>
                         <td>{ticket.assignee?.name || "–"}</td>
-                        <td className="text-[#858b90]">{formatDateTime(ticket.updatedAt)}</td>
+                        <td className="text-[var(--muted)]">{formatDateTime(ticket.updatedAt)}</td>
                         <td>
                           <div className="flex min-w-[190px] flex-wrap gap-2">
                             {canStatus && <TicketStatusForm ticketId={ticket.id} status={ticket.status} />}
@@ -97,19 +97,19 @@ export default async function StaffTicketsPage({
                                 </ConfirmSubmitButton>
                               </form>
                             )}
-                            {!canStatus && !(ticket.status === "CLOSED" && canDelete) && <span className="text-xs text-[#666c70]">Nur Ansicht</span>}
+                            {!canStatus && !(ticket.status === "CLOSED" && canDelete) && <span className="text-xs text-[var(--muted)]">Nur Ansicht</span>}
                           </div>
                         </td>
                       </tr>
                     ))}
-                    {!category.tickets.length && <tr><td colSpan={6} className="py-10 text-center text-[#777d81]">Keine Tickets in dieser Kategorie.</td></tr>}
+                    {!category.tickets.length && <tr><td colSpan={6} className="py-10 text-center text-[var(--muted)]">Keine Tickets in dieser Kategorie.</td></tr>}
                   </tbody>
                 </table>
               </div>
             </section>
           );
         })}
-        {!categories.length && <div className="surface p-10 text-center text-sm text-[#777d81]">Für deine Rollen sind keine Ticketkategorien freigegeben.</div>}
+        {!categories.length && <div className="surface p-10 text-center text-sm text-[var(--muted)]">Für deine Rollen sind keine Ticketkategorien freigegeben.</div>}
       </div>
     </PortalShell>
   );

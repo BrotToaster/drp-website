@@ -76,13 +76,13 @@ export default async function StaffNewsPage({
   return (
     <PortalShell authorization={authorization} title="News" description="Rich-Text-Beiträge mit Thumbnail und Medien erstellen und versioniert veröffentlichen." section="staff">
       {(query.error || query.saved) && (
-        <p role={query.error ? "alert" : "status"} className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[#f28d8a]" : "bg-[#57c98c]/10 text-[#75d7a3]")}>
+        <p role={query.error ? "alert" : "status"} className={"mb-5 rounded-xl p-4 text-sm " + (query.error ? "bg-[#ef6f6c]/10 text-[var(--danger-ink)]" : "bg-[#57c98c]/10 text-[var(--success-ink)]")}>
           {query.error ? "Der Beitrag konnte nicht gespeichert werden." : "Der Beitrag wurde gespeichert."}
         </p>
       )}
       {canCreate && (
         <details className="surface mb-5 p-6">
-          <summary className="cursor-pointer font-semibold text-[#efc76e]">Neuen News-Beitrag erstellen</summary>
+          <summary className="cursor-pointer font-semibold text-[var(--accent-ink)]">Neuen News-Beitrag erstellen</summary>
           <form action={saveNewsAction} className="mt-6 grid gap-4">{fields()}</form>
         </details>
       )}
@@ -95,7 +95,7 @@ export default async function StaffNewsPage({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold">{post.title}</h2>
-                    <p className="mt-2 text-xs text-[#777d81]">
+                    <p className="mt-2 text-xs text-[var(--muted)]">
                       Zuletzt bearbeitet {formatDateTime(revision?.updatedAt || post.updatedAt)}
                       {revision?.editor ? " von " + revision.editor.name : ""}
                       {post.editedAt ? " · Bearbeitet nach Veröffentlichung" : ""}
@@ -104,7 +104,7 @@ export default async function StaffNewsPage({
                   <span className={"badge " + (post.published ? "badge-gold" : "")}>{post.published ? "Veröffentlicht" : "Entwurf"}</span>
                 </div>
               </summary>
-              {canEdit && <form action={saveNewsAction} className="mt-6 grid gap-4 border-t border-white/[0.07] pt-6">{fields(post)}</form>}
+              {canEdit && <form action={saveNewsAction} className="mt-6 grid gap-4 border-t border-[var(--line)] pt-6">{fields(post)}</form>}
               <div className="mt-4 flex flex-wrap gap-2">
                 {canPublish && post.published && (
                   <form action={withdrawNewsAction}>
