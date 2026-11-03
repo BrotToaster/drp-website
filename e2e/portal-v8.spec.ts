@@ -36,6 +36,7 @@ test("öffentliche Navigation bleibt bei allen Zielbreiten bedienbar", async ({ 
 });
 
 test("Regelwerksuche bleibt sichtbar und lässt sich per Tastatur zurücksetzen", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("drp-intro-v1", "skipped"));
   await page.goto("/regelwerk");
   const search = page.getByRole("searchbox", { name: "Regelwerk durchsuchen" });
   await expect(search).toBeVisible();

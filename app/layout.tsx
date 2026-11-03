@@ -22,7 +22,7 @@ import { PreviewNotice } from "@/components/preview-notice";
 
 export const dynamic = "force-dynamic";
 
-export const viewport: Viewport = { themeColor: "#0071e3", colorScheme: "light dark" };
+export const viewport: Viewport = { themeColor: "#8b4f2c", colorScheme: "light dark" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const legal = await getLegalSettings();

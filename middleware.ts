@@ -38,4 +38,4 @@ export async function middleware(request: NextRequest) {
 // Next's internal image optimizer fetches public source files without forwarding
 // proxy headers. Keep those static assets out of page redirects; the outer
 // preview gateway still enforces HTTPS and its password for every request.
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon\\.ico$|(?:drp-logo|icon|apple-icon)\\.png$|(?:brand|maps)/.*\\.(?:png|webp)$).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon\\.ico$|(?:drp-logo|icon|apple-icon)\\.png$|(?:brand|maps|community)/.*\\.(?:png|webp)$).*)"] };

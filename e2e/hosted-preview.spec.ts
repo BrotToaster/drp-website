@@ -16,6 +16,7 @@ test.describe("isolierte Hostingvorschau", () => {
     try {
       for (const path of ["/", "/dashboard", "/api/auth/providers", "/api/search?q=Beispiel", "/?_rsc=probe"]) expect((await anonymous.get(path)).status()).toBe(401);
       expect((await anonymous.get("/datenschutz")).status()).toBe(200);
+      expect((await anonymous.get("/community/factions/polizei.webp")).status()).toBe(200);
     } finally { await anonymous.dispose(); }
     const response = await request.get("/", { headers: { Authorization: basic } });
     expect(response.status()).toBe(200);
@@ -29,7 +30,7 @@ test.describe("isolierte Hostingvorschau", () => {
   for (const role of ["member", "staff", "admin"] as const) {
     test(`${role}: Testkonto und zugehörige Bereiche funktionieren`, async ({ page, context }, testInfo) => {
       const errors: string[] = [];
-      page.on("pageerror", error => errors.push(error.message));
+      page.on("pageerror", error => errors.push(`${new URL(page.url()).pathname}: ${error.message}`));
       await page.goto("/login");
       await page.getByRole("combobox", { name: "Testrolle", exact: true }).selectOption(role);
       await page.getByLabel("Passwort für diese Testrolle", { exact: true }).fill(credential(`PREVIEW_${role.toUpperCase()}_PASSWORD`));
@@ -60,7 +61,7 @@ test.describe("isolierte Hostingvorschau", () => {
       }
       await page.emulateMedia({ colorScheme: "dark" });
       await page.evaluate(() => { localStorage.setItem("drp-appearance", "dark"); document.documentElement.dataset.appearance = "dark"; window.dispatchEvent(new Event("drp:appearance")); });
-      await expect(page.locator(".portal-nav-link:not(.active)").first()).toHaveCSS("color", "rgb(177, 177, 186)");
+      await expect(page.locator(".portal-nav-link:not(.active)").first()).toHaveCSS("color", "rgb(195, 185, 171)");
       await page.screenshot({ path: `logs/preview-${role}-${testInfo.project.name}.png` });
       expect(errors).toEqual([]);
     });

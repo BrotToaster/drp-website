@@ -52,3 +52,7 @@ Die bestehenden Lizenzen der übrigen Projektabhängigkeiten gelten unverändert
 - Gitleaks 8.30.1 (MIT), ausschließlich als Prüfwerkzeug; kein Browserbestandteil. Offizielle Quelle: https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1. Heruntergeladene Binärdateien liegen nur im ignorierten Laufzeitordner; die CI prüft den SHA-256-Wert des festgelegten Linux-Archivs.
 - Die aktualisierten Bibliotheksversionen, darunter Next.js 15.5.28, Tiptap 3.32.2, sharp 0.35.5 und Zod 4.6.7, sind in package-lock.json festgelegt. Ihre jeweiligen Paketlizenzen gelten weiter.
 - node-postgres (pg) wird für explizite portable Migrationen und Vorschauinitialisierung verwendet. Die laufende Website verwendet weiterhin Prisma.
+
+## Community-Aufnahmen und Fraktionslogos
+
+Die fünf Fraktionslogos und zwei Spielaufnahmen unter `public/community` wurden vom Nutzer zur Einbindung bereitgestellt. Die Originale wurden proportional skaliert beziehungsweise komprimiert. Die jeweilige Herkunftsdatei ist in der benachbarten `.json`-Datei vermerkt. Sie werden lokal ausgeliefert; ein zusätzliches Bildernetzwerk wird dafür nicht eingebunden.

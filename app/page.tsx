@@ -14,7 +14,7 @@ import { getHomepageSettings } from "@/lib/site-settings";
 import { HomeMotion } from "@/components/home-motion";
 import { SpotlightCard } from "@/components/spotlight-card";
 import { InteractiveLink } from "@/components/interactive-link";
-import { InterfaceIcon } from "@/components/interface-icon";
+import { communityFactions } from "@/lib/community-assets";
 
 export const dynamic = "force-dynamic";
 
@@ -80,15 +80,28 @@ export default async function HomePage() {
             title="Wo beginnt deine Geschichte?"
             copy="Wähle deinen Weg, entwickle deinen Charakter und werde Teil eines lebendigen Liberty County."
           />
+          <ul className="community-factions" aria-label="Hauptfraktionen im Roleplay">
+            {communityFactions.map(faction => <li key={faction.logo}><ContentImage src={faction.logo} alt={`Logo: ${faction.name}`} width={160} height={160} sizes="(max-width: 767px) 96px, 112px" /><span>{faction.name}</span></li>)}
+          </ul>
           <div className="department-grid">
             {homepage.departments.map((department, index) => (
               <SpotlightCard key={department.code + index} className="department-card group overflow-hidden">
-                {department.imageUrl ? <div className="department-image"><ContentImage src={department.imageUrl} alt={`Einblick in ${department.name}`} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover" /></div> : <InterfaceIcon className="department-icon" name={/fire|feuer|rett/i.test(department.name + department.code) ? "fire" : /pol|sheriff|sicher/i.test(department.name + department.code) ? "shield" : "road"} />}
+                {department.imageUrl && <div className="department-image"><ContentImage src={department.imageUrl} alt={`Einblick in ${department.name}`} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover" /></div>}
                 <h3>{department.name}</h3>
                 <p>{department.copy}</p>
                 {department.targetUrl && <a href={department.targetUrl} target="_blank" rel="noreferrer" className="text-[var(--accent-ink)]">{department.linkLabel || "Mehr erfahren"} ↗</a>}
               </SpotlightCard>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="community-gallery section-space">
+        <div className="container-shell">
+          <SectionHeading title="Einblicke aus unserer Community." copy="Gemeinsame Momente und Fahrzeuge aus dem DRP-Roleplay." />
+          <div className="community-scenes">
+            <figure><ContentImage src="/community/roleplay-gruppe.webp" alt="DRP-Spielcharaktere bei einem gemeinsamen Fototermin vor ihren Einsatzfahrzeugen" width={1440} height={647} sizes="(max-width: 767px) 100vw, 640px" /><figcaption>Ein gemeinsamer Fototermin im Roleplay.</figcaption></figure>
+            <figure><ContentImage src="/community/fahrzeugaufstellung.webp" alt="Aufgereihte DRP-Einsatzfahrzeuge mit Spielcharakteren auf einem Parkplatz in Liberty County" width={1440} height={714} sizes="(max-width: 767px) 100vw, 640px" /><figcaption>Fahrzeugaufstellung in Liberty County.</figcaption></figure>
           </div>
         </div>
       </section>
